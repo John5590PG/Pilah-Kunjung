@@ -1,0 +1,110 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+enum UnitStatus { OPERATING PAUSED CLOSED UNCONFIRMED }
+enum SourceRole { MANAGER COORDINATOR }
+enum ContactMode { CALL VISIT }
+enum UserRole { COORDINATOR ADVISOR ADMIN }
+
+model SubDistrict {
+  id       String   @id @default(uuid())
+  name     String
+  units    Unit[]
+  users    User[]
+  settings RankingSetting[]
+}
+model Unit {
+  id             String   @id @default(uuid())
+  subDistrictId  String
+  name           String
+  kelurahan      String?
+  managerContact String?
+  currentStatus  UnitStatus @default(UNCONFIRMED)
+  lastSignalAt   DateTime?
+  lastVisitedAt  DateTime?
+  isSynthetic    Boolean  @default(true)
+  archivedAt     DateTime?
+  subDistrict    SubDistrict @relation(fields: [subDistrictId], references: [id])
+  tokens         UnitToken[]
+  signals        CheckinSignal[]
+  visits         VisitConfirmation[]
+  drafts         MessageDraft[]
+}
+model UnitToken {
+  id        String   @id @default(uuid())
+  unitId    String
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+  unit      Unit @relation(fields: [unitId], references: [id])
+}
+model ReportingCycle {
+  id          String   @id @default(uuid())
+  periodLabel String   @unique
+  openedAt    DateTime
+  cutoffAt    DateTime
+  signals     CheckinSignal[]
+  drafts      MessageDraft[]
+}
+model CheckinSignal {
+  id             String   @id @default(uuid())
+  unitId         String
+  cycleId        String
+  reportedStatus UnitStatus
+  sourceRole     SourceRole
+  submittedAt    DateTime @default(now())
+  undoneAt       DateTime?
+  unit           Unit @relation(fields: [unitId], references: [id])
+  cycle          ReportingCycle @relation(fields: [cycleId], references: [id])
+  @@index([unitId, cycleId])
+}
+model User {
+  id            String   @id @default(uuid())
+  subDistrictId String?
+  email         String   @unique
+  passwordHash  String
+  role          UserRole
+  subDistrict   SubDistrict? @relation(fields: [subDistrictId], references: [id])
+  visits        VisitConfirmation[]
+  drafts        MessageDraft[]
+  audits        AuditLog[]
+}
+model VisitConfirmation {
+  id            String   @id @default(uuid())
+  unitId        String
+  coordinatorId String
+  contactMode   ContactMode
+  verifiedStatus UnitStatus
+  actionNote    String?
+  verifiedAt    DateTime @default(now())
+  unit          Unit @relation(fields: [unitId], references: [id])
+  coordinator   User @relation(fields: [coordinatorId], references: [id])
+}
+model MessageDraft {
+  id          String   @id @default(uuid())
+  cycleId     String
+  unitId      String
+  messageText String
+  sentById    String?
+  sentAt      DateTime?
+  cycle       ReportingCycle @relation(fields: [cycleId], references: [id])
+  unit        Unit @relation(fields: [unitId], references: [id])
+  sentBy      User? @relation(fields: [sentById], references: [id])
+}
+model RankingSetting {
+  id            String @id @default(uuid())
+  subDistrictId String
+  wSilent       Int @default(2)
+  wUnconfirmed  Int @default(3)
+  wPaused       Int @default(2)
+  cutoffDays    Int @default(7)
+  subDistrict   SubDistrict @relation(fields: [subDistrictId], references: [id])
+}
+model AuditLog {
+  id     String   @id @default(uuid())
+  userId String?
+  action String
+  target String?
+  at     DateTime @default(now())
+  user   User? @relation(fields: [userId], references: [id])
+}
