@@ -15,6 +15,7 @@ Gerbang kualitas: semua klaim "sudah" punya bukti (tangkapan layar/berkas).
 
 ## Fase 2 — Menunggu pengumuman Top 10 (1–6 Des)
 Siapkan repo kosong berstruktur (folder di README), `.env.example`, docker-compose, migrasi awal. Jangan menganggap lolos.
+**Status 27 Nov:** schema final, migrasi awal, `docker-compose.yml`, seed sintetis, auth/RBAC, endpoint inti, dan penyambungan UI ke API sudah dibuat (lihat docs/03). Mode demo localStorage tetap tersedia bila database tidak dikonfigurasi.
 
 ## Fase 3 — Perbaikan produk (7–16 Des, jika lolos)
 | Hari | Tugas | Pemilik |

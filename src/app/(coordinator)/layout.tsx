@@ -1,5 +1,5 @@
 import { AppNav } from "@/components/coordinator/AppNav";
-import { SyntheticBanner } from "@/components/ui/SyntheticBanner";
+import { SyntheticBanner } from "@/components/common/SyntheticBanner";
 
 export default function CoordinatorLayout({ children }: { children: React.ReactNode }) {
   return (

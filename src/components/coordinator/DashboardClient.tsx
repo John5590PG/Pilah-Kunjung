@@ -2,15 +2,21 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useDemo } from "@/lib/demo/store";
-import { DEFAULT_CONFIG, rankUnits, type Ranked } from "@/lib/ranking";
+import { useAppData } from "@/lib/appdata/provider";
+import { rankUnits, type Ranked } from "@/lib/ranking";
 import type { DemoUnit } from "@/lib/demo/state";
 import { STATUS_EN, STATUS_ORDER, type UnitStatus } from "@/lib/status";
 import { agoEn, csvCell, monthsEn } from "@/lib/format";
 import { periodLabelId } from "@/lib/whatsapp/build-link";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { ScoreTooltip } from "@/components/ui/ScoreTooltip";
-import { EmptyState, PageSkeleton } from "@/components/ui/EmptyState";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { ScoreTooltip } from "@/components/common/ScoreTooltip";
+import { EmptyState, PageSkeleton } from "@/components/common/EmptyState";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Search, Download, AlertCircle, PhoneCall, ExternalLink } from "lucide-react";
 
 type Filter = "ALL" | UnitStatus;
 
@@ -22,10 +28,9 @@ function reason(u: Ranked<DemoUnit>): string {
 }
 
 export function DashboardClient() {
-  const { state } = useDemo();
+  const { state, config: cfg, mode, error } = useAppData();
   const [filter, setFilter] = useState<Filter>("ALL");
   const [q, setQ] = useState("");
-  const cfg = DEFAULT_CONFIG;
 
   const ranked = useMemo(() => (state ? rankUnits(state.units, cfg) : []), [state, cfg]);
   if (!state) return <PageSkeleton />;
@@ -39,12 +44,18 @@ export function DashboardClient() {
   const rows = ranked.filter((u) => (filter === "ALL" || filter === u.status) && match(u));
   const closedRows = filter === "ALL" || filter === "CLOSED" ? closed.filter(match) : [];
 
-  const exportCsv = () => {
-    const head = ["rank", "unit", "kelurahan", "status", "silent_cycles", "months_since_contact", "score", "is_synthetic"];
-    const lines = ranked.map((u) =>
-      [u.rank, u.name, u.kelurahan, u.status, u.silentCycles, u.monthsSinceContact, u.score, "true"].map(csvCell).join(","),
-    );
-    const blob = new Blob([[head.join(","), ...lines].join("\n") + "\n"], { type: "text/csv;charset=utf-8" });
+  const exportCsv = async () => {
+    let blob: Blob;
+    if (mode === "api") {
+      const response = await fetch("/api/export", { credentials: "same-origin" });
+      blob = await response.blob();
+    } else {
+      const head = ["rank", "unit", "kelurahan", "status", "silent_cycles", "months_since_contact", "score", "is_synthetic"];
+      const lines = ranked.map((u) =>
+        [u.rank, u.name, u.kelurahan, u.status, u.silentCycles, u.monthsSinceContact, u.score, "true"].map(csvCell).join(","),
+      );
+      blob = new Blob([[head.join(","), ...lines].join("\n") + "\n"], { type: "text/csv;charset=utf-8" });
+    }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `visit-list-${state.cycle}.csv`;
@@ -53,111 +64,264 @@ export function DashboardClient() {
   };
 
   return (
-    <div>
-      <p className="text-sm font-semibold uppercase tracking-wide text-brand">Screen 3 · Coordinator dashboard</p>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-6">
+      {error && (
+        <p role="alert" className="rounded-fib3 border border-un/40 bg-un-bg px-3 py-2 text-sm font-semibold text-un">
+          {error}
+        </p>
+      )}
+      {/* Top Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold">Visit priority — {periodLabelId(state.cycle)}</h1>
-          <p className="text-muted">Kecamatan Gunungpati · {state.units.length} simulated units</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-brand">Layar 3 · Dasbor Koordinator</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-ink">
+            Prioritas Kunjungan {periodLabelId(state.cycle)}
+          </h1>
+          <p className="text-sm text-muted">
+            Kecamatan Gunungpati · {state.units.length} unit bank sampah simulasi
+          </p>
         </div>
-        <button type="button" onClick={exportCsv} className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-semibold hover:bg-brand-soft">
-          Export visit list (CSV)
-        </button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={exportCsv}
+          className="border-line bg-white/80 hover:bg-green-dark hover:text-white hover:border-green-dark text-ink font-semibold gap-2 shadow-2xs rounded-fib3 transition-all duration-200"
+        >
+          <Download className="h-4 w-4 text-brand group-hover/button:text-white transition-colors" />
+          <span>Ekspor Daftar Kunjungan (CSV)</span>
+        </Button>
       </div>
 
-      <section aria-label="Status summary" className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        {STATUS_ORDER.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setFilter(filter === s ? "ALL" : s)}
-            aria-pressed={filter === s}
-            className={`rounded-xl border bg-white p-4 text-left hover:bg-brand-soft/60 ${filter === s ? "border-brand ring-2 ring-brand/30" : "border-line"}`}
-          >
-            <span className="block text-3xl font-extrabold tabular-nums">{counts[s]}</span>
-            <StatusBadge status={s} />
-          </button>
-        ))}
+      {/* Status Summary KPI Cards */}
+      <section aria-label="Status summary" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {STATUS_ORDER.map((s) => {
+          const isSelected = filter === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setFilter(filter === s ? "ALL" : s)}
+              aria-pressed={isSelected}
+              className="group/kpi lift-soft w-full text-left focus:outline-none cursor-pointer"
+            >
+              <Card
+                className={`rounded-fib4 transition-all duration-200 ${
+                  isSelected
+                    ? "border-brand ring-2 ring-brand/40 bg-brand-soft/30"
+                    : "border-line bg-white"
+                } group-hover/kpi:border-green-dark group-hover/kpi:bg-green-dark group-hover/kpi:ring-0`}
+              >
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-3xl font-black text-ink tabular-nums transition-colors group-hover/kpi:text-white">
+                      {counts[s]}
+                    </span>
+                    <span className="text-xs font-semibold text-muted transition-colors group-hover/kpi:text-green-light">
+                      {isSelected ? "Filter Aktif" : "Klik Filter"}
+                    </span>
+                  </div>
+                  <div>
+                    <StatusBadge
+                      status={s}
+                      className="group-hover/kpi:border-white/30 group-hover/kpi:bg-white/15 group-hover/kpi:text-white"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </button>
+          );
+        })}
       </section>
 
-      <section aria-label="Top visits" className="mt-6">
-        <h2 className="text-lg font-bold">Contact first (top 5)</h2>
-        <ol className="mt-2 grid gap-2 md:grid-cols-5">
+      {/* Top 5 Priority Cards */}
+      <section aria-label="Top visits" className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-ink">Kunjungi Terlebih Dahulu (Top 5 Prioritas)</h2>
+          <span className="text-xs text-muted">Dihitung otomatis tanpa AI</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {ranked.slice(0, 5).map((u) => (
-            <li key={u.id} className="rounded-xl border border-line bg-white p-3">
-              <p className="text-xs font-bold text-muted">#{u.rank} · score {u.score}</p>
-              <Link href={`/units/${u.id}`} className="font-semibold text-brand underline underline-offset-2">{u.name}</Link>
-              <p className="mt-1 text-xs text-muted">{reason(u)}</p>
-            </li>
+            <Card key={u.id} className="group/priority lift-soft rounded-fib4 border-line bg-white shadow-2xs transition-colors duration-200 hover:border-green-dark hover:bg-green-dark">
+              <CardContent className="p-3.5 flex flex-col justify-between h-full gap-2">
+                <div>
+                  <div className="flex items-center justify-between text-xs pb-1">
+                    <Badge variant="outline" className="row-chip border-brand/30 bg-brand-soft/50 text-brand font-bold text-[11px] px-1.5 py-0 transition-colors group-hover/priority:border-white/30 group-hover/priority:bg-white/15 group-hover/priority:text-white">
+                      Rank #{u.rank}
+                    </Badge>
+                    <span className="row-chip font-mono font-bold text-ink text-xs bg-paper px-1.5 py-0.5 rounded-fib1 transition-colors group-hover/priority:bg-white/15 group-hover/priority:text-white">
+                      Skor {u.score}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/units/${u.id}`}
+                    className="font-bold text-sm text-ink transition-colors line-clamp-1 mt-1 block hover:text-green-light group-hover/priority:text-white"
+                  >
+                    {u.name}
+                  </Link>
+                  <p className="text-[11px] text-muted line-clamp-2 mt-0.5 transition-colors group-hover/priority:text-green-pale">{reason(u)}</p>
+                </div>
+                <div className="pt-2 border-t border-line/50 flex items-center justify-between transition-colors group-hover/priority:border-white/20">
+                  <span className="text-[11px] text-muted transition-colors group-hover/priority:text-white/75">{u.kelurahan}</span>
+                  <Link
+                    href={`/units/${u.id}`}
+                    className="text-xs font-bold text-brand hover:underline inline-flex items-center gap-0.5 transition-colors group-hover/priority:text-green-light"
+                  >
+                    <span>Detail</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </ol>
+        </div>
       </section>
 
-      <p className="mt-6 rounded-lg bg-brand-soft px-3 py-2 text-sm">
-        <b>Score = {cfg.wSilent}×M + W + B</b> — deterministic heuristic, no AI. M = consecutive silent cycles, W = status weight
-        (Unconfirmed {cfg.wUnconfirmed}, Paused {cfg.wPaused}, Operating 0), B = no-contact bonus (+2 never/&gt;6 mo, +1 for 3–6 mo).
-        Initial weights, to be calibrated with practitioners. Closed units are excluded.
-      </p>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <label className="sr-only" htmlFor="q">Search unit</label>
-        <input
-          id="q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search unit name…"
-          className="min-h-[44px] w-full max-w-xs rounded-lg border border-line bg-white px-3"
-        />
-        {(["ALL", ...STATUS_ORDER] as Filter[]).map((f) => (
-          <button
-            key={f} type="button" onClick={() => setFilter(f)} aria-pressed={filter === f}
-            className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${filter === f ? "border-brand bg-brand text-white" : "border-line bg-white hover:bg-brand-soft"}`}
-          >
-            {f === "ALL" ? "All" : STATUS_EN[f]}
-          </button>
-        ))}
+      {/* Formula Explanation Callout */}
+      <div className="rounded-fib4 border border-brand/20 bg-brand-soft/40 p-4 text-xs md:text-sm text-ink leading-relaxed flex items-start gap-3 transition-shadow hover:shadow-xs">
+        <AlertCircle className="h-5 w-5 shrink-0 text-brand mt-0.5" />
+        <div>
+          <b className="font-bold text-brand">Rumus Peringkat Kunjungan:</b>{" "}
+          <span className="font-mono font-bold bg-white/70 px-1.5 py-0.5 rounded border border-brand/20">
+            Skor = {cfg.wSilent}×M + W + B
+          </span>{" "}
+          Murni rumus deterministik, tanpa AI/ML. <b>M</b> = siklus diam berturut-turut, <b>W</b> = bobot status (Unconfirmed {cfg.wUnconfirmed}, Paused {cfg.wPaused}, Operating 0), <b>B</b> = bonus tanpa kontak (+2 belum pernah atau lebih dari 6 bln, +1 untuk 3 sampai 6 bln). Unit Closed dikecualikan dari antrean kunjungan.
+        </div>
       </div>
 
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-line bg-white">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="bg-paper text-left text-xs uppercase tracking-wide text-muted">
-            <tr>
-              <th className="px-3 py-2">#</th><th className="px-3 py-2">Unit</th><th className="px-3 py-2">Status</th>
-              <th className="hidden px-3 py-2 md:table-cell">Silent</th>
-              <th className="hidden px-3 py-2 md:table-cell">Last signal</th>
-              <th className="hidden px-3 py-2 md:table-cell">Last contact</th>
-              <th className="px-3 py-2">Score</th><th className="px-3 py-2 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {rows.map((u) => (
-              <tr key={u.id} className="hover:bg-brand-soft/40">
-                <td className="px-3 py-2 font-mono font-bold">{u.rank}</td>
-                <td className="px-3 py-2"><Link href={`/units/${u.id}`} className="font-semibold text-brand underline underline-offset-2">{u.name}</Link><span className="block text-xs text-muted">{u.kelurahan}</span></td>
-                <td className="px-3 py-2"><StatusBadge status={u.status} /></td>
-                <td className="hidden px-3 py-2 md:table-cell">{u.silentCycles}</td>
-                <td className="hidden px-3 py-2 md:table-cell">{agoEn(u.lastSignalAt, now)}</td>
-                <td className="hidden px-3 py-2 md:table-cell">{monthsEn(u.monthsSinceContact)}</td>
-                <td className="px-3 py-2"><ScoreTooltip b={u.breakdown} silentCycles={u.silentCycles} cfg={cfg} /></td>
-                <td className="px-3 py-2 text-right whitespace-nowrap">
-                  <Link href={`/cycles?unit=${u.id}`} className="mr-2 rounded border border-line px-2 py-1 text-xs font-semibold hover:bg-brand-soft">Remind</Link>
-                  <Link href={`/units/${u.id}`} className="rounded bg-brand px-2 py-1 text-xs font-semibold text-white hover:bg-teal-950">Log contact</Link>
-                </td>
-              </tr>
-            ))}
-            {closedRows.map((u) => (
-              <tr key={u.id} className="bg-paper/60 text-muted">
-                <td className="px-3 py-2">—</td>
-                <td className="px-3 py-2"><Link href={`/units/${u.id}`} className="font-semibold underline underline-offset-2">{u.name}</Link><span className="block text-xs">{u.kelurahan}</span></td>
-                <td className="px-3 py-2"><StatusBadge status="CLOSED" /></td>
-                <td className="hidden px-3 py-2 md:table-cell">{u.silentCycles}</td>
-                <td className="hidden px-3 py-2 md:table-cell">{agoEn(u.lastSignalAt, now)}</td>
-                <td className="hidden px-3 py-2 md:table-cell">{monthsEn(u.monthsSinceContact)}</td>
-                <td className="px-3 py-2 text-xs">excluded</td>
-                <td className="px-3 py-2 text-right text-xs">archived</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {rows.length + closedRows.length === 0 && <EmptyState title="No units match" hint="Clear the search or pick another status." />}
+      {/* Search & Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
+          <Input
+            id="q"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Cari nama bank sampah…"
+            className="pl-9 h-10 bg-white/85 border-line text-sm rounded-fib3 hover:border-brand/60 focus-visible:border-brand transition-colors"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-muted mr-1">Status:</span>
+          {(["ALL", ...STATUS_ORDER] as Filter[]).map((f) => {
+            const isSelected = filter === f;
+            return (
+              <Button
+                key={f}
+                type="button"
+                variant={isSelected ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(f)}
+                className={`text-xs h-8 rounded-fib3 transition-all duration-200 ${
+                  isSelected
+                    ? "bg-green-mid text-white hover:bg-green-dark"
+                    : "border-line bg-white/80 text-ink hover:bg-green-dark hover:text-white hover:border-green-dark"
+                }`}
+              >
+                {f === "ALL" ? "Semua Unit" : STATUS_EN[f]}
+              </Button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Units Table */}
+      <Card className="rounded-fib4 border-line bg-white overflow-hidden shadow-2xs">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px] text-sm">
+            <thead className="bg-paper text-left text-xs uppercase tracking-wider text-muted font-bold border-b border-line">
+              <tr>
+                <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Bank Sampah</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="hidden px-4 py-3 md:table-cell">Siklus Diam</th>
+                <th className="hidden px-4 py-3 md:table-cell">Laporan Terakhir</th>
+                <th className="hidden px-4 py-3 md:table-cell">Kontak Terakhir</th>
+                <th className="px-4 py-3">Skor</th>
+                <th className="px-4 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {rows.map((u) => (
+                <tr key={u.id} className="unit-row">
+                  <td className="px-4 py-3 font-mono font-bold text-xs text-muted">
+                    #{u.rank}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/units/${u.id}`}
+                      className="font-bold text-ink hover:text-brand transition-colors block"
+                    >
+                      {u.name}
+                    </Link>
+                    <span className="block text-xs text-muted">{u.kelurahan}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={u.status} />
+                  </td>
+                  <td className="hidden px-4 py-3 md:table-cell font-mono text-xs">
+                    {u.silentCycles > 0 ? (
+                      <span className="font-bold text-un">{u.silentCycles} bln</span>
+                    ) : (
+                      <span className="text-muted">0</span>
+                    )}
+                  </td>
+                  <td className="hidden px-4 py-3 md:table-cell text-xs text-muted">
+                    {agoEn(u.lastSignalAt, now)}
+                  </td>
+                  <td className="hidden px-4 py-3 md:table-cell text-xs text-muted">
+                    {monthsEn(u.monthsSinceContact)}
+                  </td>
+                  <td className="px-4 py-3 font-mono">
+                    <ScoreTooltip b={u.breakdown} silentCycles={u.silentCycles} cfg={cfg} />
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/cycles?unit=${u.id}`}
+                        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "row-action h-7 px-2.5 text-xs rounded-fib2 border-line bg-white/85 hover:bg-green-dark hover:text-white hover:border-green-dark inline-flex items-center justify-center transition-all duration-200")}
+                      >
+                        Ingatkan
+                      </Link>
+                      <Link
+                        href={`/units/${u.id}`}
+                        className={cn(buttonVariants({ size: "sm" }), "row-action h-7 px-2.5 text-xs rounded-fib2 bg-green-mid text-white hover:bg-green-dark inline-flex items-center justify-center transition-all duration-200")}
+                      >
+                        <PhoneCall className="h-3 w-3 mr-1" />
+                        Catat
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {closedRows.map((u) => (
+                <tr key={u.id} className="unit-row bg-paper/40 text-muted">
+                  <td className="px-4 py-3 font-mono text-xs">-</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/units/${u.id}`} className="font-semibold underline underline-offset-2 hover:text-ink">
+                      {u.name}
+                    </Link>
+                    <span className="block text-xs">{u.kelurahan}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status="CLOSED" />
+                  </td>
+                  <td className="hidden px-4 py-3 md:table-cell text-xs">{u.silentCycles}</td>
+                  <td className="hidden px-4 py-3 md:table-cell text-xs">{agoEn(u.lastSignalAt, now)}</td>
+                  <td className="hidden px-4 py-3 md:table-cell text-xs">{monthsEn(u.monthsSinceContact)}</td>
+                  <td className="px-4 py-3 text-xs italic">dikecualikan</td>
+                  <td className="px-4 py-3 text-right text-xs">diarsipkan</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length + closedRows.length === 0 && (
+            <div className="p-8">
+              <EmptyState title="Tidak ada unit yang sesuai" hint="Coba bersihkan kata kunci pencarian atau ganti filter status." />
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

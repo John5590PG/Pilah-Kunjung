@@ -20,7 +20,7 @@ export function buildReminderMessage(opts: { unitName: string; period: string; u
     `Halo, pengurus ${opts.unitName}.`,
     `Pengingat bulan ${periodLabelId(opts.period)}: mohon ketuk satu tombol untuk memberi tahu kondisi bank sampah bulan ini (tanpa login, kurang dari 10 detik).`,
     opts.url,
-    "Terima kasih. — Korcam Gunungpati",
+    "Terima kasih, Korcam Gunungpati",
   ].join("\n\n");
 }
 

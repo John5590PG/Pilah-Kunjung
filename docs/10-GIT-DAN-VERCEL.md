@@ -35,7 +35,7 @@ Jika repo berisi riwayat lain dan `git push` ditolak: `git pull --rebase origin 
 1. Buka vercel.com -> **Sign Up / Log in with GitHub**, izinkan akses ke repo `<REPO>`.
 2. **Add New… -> Project -> Import** repo `<REPO>`.
 3. Framework otomatis **Next.js**. Jika proyek ada di subfolder repo, isi **Root Directory** = `pilah-kunjung`. Build/Output biarkan default.
-4. Environment Variables: **tidak perlu** (prototipe tanpa database). Klik **Deploy**.
+4. Environment Variables: **tidak perlu** untuk demo UI (localStorage). Untuk API backend: `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `TOKEN_PEPPER`, `APP_BASE_URL`. Klik **Deploy**.
 5. Selesai: Vercel memberi URL `https://<nama>.vercel.app`. Setiap `git push` ke `main` otomatis deploy ulang; branch/PR mendapat URL Preview.
 6. Uji URL di ponsel: buka `/`, ikuti 4 langkah. Cantumkan URL itu di proposal/video sebagai "prototype (simulated data)".
 

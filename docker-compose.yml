@@ -1,0 +1,25 @@
+# Local PostgreSQL for the Pilah & Kunjung backend.
+# Start:  docker compose up -d
+# Stop:   docker compose down
+# Reset:  docker compose down -v   (deletes the volume)
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pilah-kunjung-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pilah
+      POSTGRES_PASSWORD: pilah
+      POSTGRES_DB: pilah
+    ports:
+      - "5432:5432"
+    volumes:
+      - pilah-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pilah -d pilah"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pilah-pgdata:

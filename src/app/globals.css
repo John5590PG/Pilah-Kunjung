@@ -1,13 +1,32 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --color-paper: #f5f3ec;
-  --color-ink: #12262d;
-  --color-muted: #4f6168;
-  --color-line: #d6dcdd;
-  --color-brand: #0f4a57;
-  --color-brand-soft: #dcebee;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Warm Green Community Palette */
+  --color-green-dark: #1b4332;
+  --color-green-mid: #2d6a4f;
+  --color-green-brand: #40916c;
+  --color-green-light: #74c69d;
+  --color-green-pale: #d8f3dc;
+  --color-green-mist: #f0faf4;
+  /* Warm Neutrals */
+  --color-paper: #fafaf8;
+  --color-cream: #f4f1ec;
+  --color-ink: #1a2e1f;
+  --color-ink-mid: #2d4a35;
+  --color-muted: #4b7060;
+  --color-line: #d1e8da;
+  /* Legacy spruce — kept for internal dashboard pages */
+  --color-spruce: #1b4332;
+  --color-spruce-surface: #21523e;
+  --color-spruce-line: rgba(255, 255, 255, 0.15);
+  --color-brand: #2d6a4f;
+  --color-brand-soft: #d8f3dc;
+  /* Status Colors (unchanged) */
   --color-op: #17683f;
   --color-op-bg: #e1f2e8;
   --color-pa: #85500a;
@@ -16,10 +35,215 @@
   --color-cl-bg: #e6e9ec;
   --color-un: #9b2b26;
   --color-un-bg: #fae3e0;
+  /* Fibonacci corner scale — one soft, proportional radius system (px) */
+  --radius-fib1: 3px;
+  --radius-fib2: 5px;
+  --radius-fib3: 8px;
+  --radius-fib4: 13px;
+  --radius-fib5: 21px;
+  --radius-fib6: 34px;
 }
 
-:root { color-scheme: light; }
-html { -webkit-text-size-adjust: 100%; }
+:root {
+  color-scheme: light;
+  --background: #fafaf8;
+  --foreground: #1a2e1f;
+  --card: #ffffff;
+  --card-foreground: #1a2e1f;
+  --popover: #ffffff;
+  --popover-foreground: #1a2e1f;
+  --primary: #2d6a4f;
+  --primary-foreground: #ffffff;
+  --secondary: #d8f3dc;
+  --secondary-foreground: #1b4332;
+  --muted: #e8f5ed;
+  --muted-foreground: #4b7060;
+  --accent: #d8f3dc;
+  --accent-foreground: #1b4332;
+  --destructive: #9b2b26;
+  --destructive-foreground: #ffffff;
+  --border: #d1e8da;
+  --input: #d1e8da;
+  --ring: #40916c;
+  --chart-1: #2d6a4f;
+  --chart-2: #40916c;
+  --chart-3: #85500a;
+  --chart-4: #4f6168;
+  --chart-5: #9b2b26;
+  --radius: 8px;
+  --sidebar: #fafaf8;
+  --sidebar-foreground: #1a2e1f;
+  --sidebar-primary: #2d6a4f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #d8f3dc;
+  --sidebar-accent-foreground: #1b4332;
+  --sidebar-border: #d1e8da;
+  --sidebar-ring: #40916c;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* Sticky header is ~72px; anchors land just below it. */
+  scroll-padding-top: 5.5rem;
+}
 body { background: var(--color-paper); color: var(--color-ink); font-family: var(--font-sans); }
-:focus-visible { outline: 3px solid #1b6b7a; outline-offset: 2px; border-radius: 6px; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+:focus-visible { outline: 3px solid #40916c; outline-offset: 2px; border-radius: 8px; }
+section[id] { scroll-margin-top: 5.5rem; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  * { transition: none !important; animation: none !important; }
+  [class*="hover:-translate"]:hover { transform: none !important; translate: none !important; }
+  [class*="group-hover"][class*="translate"] { translate: none !important; }
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-xl: 13px;
+  --radius-2xl: 21px;
+  --radius-3xl: 34px;
+  --radius-4xl: 55px;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Interaction layer
+   Resting surfaces stay calm; hover swaps to the deep green ink so the
+   text, icons and badges change colour together (never hover colour alone).
+   These rules are unlayered on purpose: they win over Tailwind utilities.
+   ------------------------------------------------------------------ */
+
+/* Frosted, see-through navigation. "data-scrolled" firms it up on scroll. */
+.glass-header {
+  background-color: rgb(255 255 255 / 0.42);
+  -webkit-backdrop-filter: blur(21px) saturate(165%);
+  backdrop-filter: blur(21px) saturate(165%);
+  border-bottom: 1px solid rgb(45 106 79 / 0.13);
+  transition: background-color 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.glass-header[data-scrolled="true"] {
+  background-color: rgb(255 255 255 / 0.86);
+  border-bottom-color: rgb(45 106 79 / 0.2);
+  box-shadow: 0 13px 34px -21px rgb(27 67 50 / 0.45);
+}
+
+/* Dense rows: priority table, WA daftar unit, riwayat, matriks, settings. */
+.unit-row,
+.wa-row {
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+.unit-row:hover,
+.wa-row:hover {
+  background-color: var(--color-green-dark);
+  box-shadow: inset 3px 0 0 var(--color-green-light);
+}
+.unit-row:hover :is(td, th, span, a, b, strong, small, div, p),
+.wa-row:hover :is(td, th, span, a, b, strong, small, div, p) {
+  color: #f0faf4;
+}
+/* Badges and chips keep their own contrast inside an inverted row. */
+.unit-row:hover .contrast-badge,
+.wa-row:hover .contrast-badge {
+  background-color: rgb(255 255 255 / 0.14);
+  border-color: rgb(255 255 255 / 0.35);
+  color: #ffffff;
+}
+.unit-row:hover .row-chip,
+.wa-row:hover .row-chip {
+  background-color: rgb(255 255 255 / 0.14);
+  color: #ffffff;
+}
+/* Row action buttons stay legible when the whole row turns dark. */
+.unit-row:hover .row-action {
+  background-color: var(--color-green-mid);
+  border-color: rgb(255 255 255 / 0.35);
+  color: #ffffff;
+}
+
+/* Small shared lift used by linked cards and primary controls. */
+.lift-soft {
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+.lift-soft:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 21px 34px -21px rgb(27 67 50 / 0.5);
+}

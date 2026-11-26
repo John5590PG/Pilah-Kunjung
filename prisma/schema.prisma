@@ -1,110 +1,173 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
 
-enum UnitStatus { OPERATING PAUSED CLOSED UNCONFIRMED }
-enum SourceRole { MANAGER COORDINATOR }
-enum ContactMode { CALL VISIT }
-enum UserRole { COORDINATOR ADVISOR ADMIN }
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UnitStatus {
+  OPERATING
+  PAUSED
+  CLOSED
+  UNCONFIRMED
+}
+
+enum SourceRole {
+  MANAGER
+  COORDINATOR
+}
+
+enum ContactMode {
+  CALL
+  VISIT
+}
+
+enum UserRole {
+  COORDINATOR
+  ADVISOR
+  ADMIN
+}
 
 model SubDistrict {
   id       String   @id @default(uuid())
   name     String
+  createdAt DateTime @default(now())
   units    Unit[]
   users    User[]
   settings RankingSetting[]
 }
+
 model Unit {
-  id             String   @id @default(uuid())
+  id             String      @id @default(uuid())
   subDistrictId  String
   name           String
   kelurahan      String?
   managerContact String?
-  currentStatus  UnitStatus @default(UNCONFIRMED)
+  currentStatus  UnitStatus  @default(UNCONFIRMED)
   lastSignalAt   DateTime?
   lastVisitedAt  DateTime?
-  isSynthetic    Boolean  @default(true)
+  isSynthetic    Boolean     @default(true)
   archivedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
   subDistrict    SubDistrict @relation(fields: [subDistrictId], references: [id])
   tokens         UnitToken[]
   signals        CheckinSignal[]
   visits         VisitConfirmation[]
   drafts         MessageDraft[]
+
+  @@index([subDistrictId])
+  @@index([currentStatus])
 }
+
 model UnitToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   unitId    String
-  tokenHash String   @unique
-  createdAt DateTime @default(now())
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
   revokedAt DateTime?
-  unit      Unit @relation(fields: [unitId], references: [id])
+  unit      Unit      @relation(fields: [unitId], references: [id])
+
+  @@index([unitId])
 }
+
 model ReportingCycle {
-  id          String   @id @default(uuid())
-  periodLabel String   @unique
+  id          String          @id @default(uuid())
+  periodLabel String          @unique
   openedAt    DateTime
   cutoffAt    DateTime
+  closedAt    DateTime?
+  createdAt   DateTime        @default(now())
   signals     CheckinSignal[]
   drafts      MessageDraft[]
+
+  @@index([openedAt])
 }
+
 model CheckinSignal {
-  id             String   @id @default(uuid())
-  unitId         String
-  cycleId        String
-  reportedStatus UnitStatus
-  sourceRole     SourceRole
-  submittedAt    DateTime @default(now())
-  undoneAt       DateTime?
-  unit           Unit @relation(fields: [unitId], references: [id])
-  cycle          ReportingCycle @relation(fields: [cycleId], references: [id])
+  id                 String         @id @default(uuid())
+  unitId             String
+  cycleId            String
+  reportedStatus     UnitStatus
+  sourceRole         SourceRole
+  submittedAt        DateTime       @default(now())
+  undoneAt           DateTime?
+  /** Snapshot for the 10-minute undo (docs/04 #4). */
+  previousStatus     UnitStatus?
+  previousLastSignalAt DateTime?
+  unit               Unit           @relation(fields: [unitId], references: [id])
+  cycle              ReportingCycle @relation(fields: [cycleId], references: [id])
+
   @@index([unitId, cycleId])
+  @@index([cycleId])
 }
+
 model User {
-  id            String   @id @default(uuid())
+  id            String      @id @default(uuid())
   subDistrictId String?
-  email         String   @unique
+  email         String      @unique
   passwordHash  String
   role          UserRole
+  createdAt     DateTime    @default(now())
   subDistrict   SubDistrict? @relation(fields: [subDistrictId], references: [id])
   visits        VisitConfirmation[]
   drafts        MessageDraft[]
   audits        AuditLog[]
+
+  @@index([subDistrictId])
 }
+
 model VisitConfirmation {
-  id            String   @id @default(uuid())
-  unitId        String
-  coordinatorId String
-  contactMode   ContactMode
+  id             String      @id @default(uuid())
+  unitId         String
+  coordinatorId  String
+  contactMode    ContactMode
   verifiedStatus UnitStatus
-  actionNote    String?
-  verifiedAt    DateTime @default(now())
-  unit          Unit @relation(fields: [unitId], references: [id])
-  coordinator   User @relation(fields: [coordinatorId], references: [id])
+  actionNote     String?
+  verifiedAt     DateTime    @default(now())
+  unit           Unit        @relation(fields: [unitId], references: [id])
+  coordinator    User        @relation(fields: [coordinatorId], references: [id])
+
+  @@index([unitId, verifiedAt])
 }
+
 model MessageDraft {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   cycleId     String
   unitId      String
   messageText String
   sentById    String?
   sentAt      DateTime?
+  createdAt   DateTime       @default(now())
   cycle       ReportingCycle @relation(fields: [cycleId], references: [id])
-  unit        Unit @relation(fields: [unitId], references: [id])
-  sentBy      User? @relation(fields: [sentById], references: [id])
+  unit        Unit           @relation(fields: [unitId], references: [id])
+  sentBy      User?          @relation(fields: [sentById], references: [id])
+
+  @@unique([cycleId, unitId])
+  @@index([unitId])
 }
+
 model RankingSetting {
-  id            String @id @default(uuid())
-  subDistrictId String
-  wSilent       Int @default(2)
-  wUnconfirmed  Int @default(3)
-  wPaused       Int @default(2)
-  cutoffDays    Int @default(7)
+  id            String     @id @default(uuid())
+  subDistrictId String     @unique
+  wSilent       Int        @default(2)
+  wUnconfirmed  Int        @default(3)
+  wPaused       Int        @default(2)
+  cutoffDays    Int        @default(7)
   subDistrict   SubDistrict @relation(fields: [subDistrictId], references: [id])
 }
+
 model AuditLog {
   id     String   @id @default(uuid())
   userId String?
   action String
   target String?
   at     DateTime @default(now())
-  user   User? @relation(fields: [userId], references: [id])
+  user   User?    @relation(fields: [userId], references: [id])
+
+  @@index([at])
+  @@index([userId])
 }

@@ -33,14 +33,17 @@ erDiagram
   REPORTING_CYCLES { uuid id PK
     string period_label
     datetime opened_at
-    datetime cutoff_at }
+    datetime cutoff_at
+    datetime closed_at }
   CHECKIN_SIGNALS { uuid id PK
     uuid unit_id FK
     uuid cycle_id FK
     enum reported_status
     enum source_role
     datetime submitted_at
-    datetime undone_at }
+    datetime undone_at
+    enum previous_status
+    datetime previous_last_signal_at }
   VISIT_CONFIRMATIONS { uuid id PK
     uuid unit_id FK
     uuid coordinator_id FK
@@ -78,6 +81,7 @@ erDiagram
 - **Tidak ada tabel nasabah/transaksi.** Zero resident PII.
 - **ranking_settings** membuat bobot dan batas hari bisa diatur DLH (risiko "otoritas definisi aktif").
 - Semua data demo: is_synthetic = true; UI menampilkan lencana "SIMULATED DATA".
+- **Implementasi Prisma (27 Nov 2026):** `reporting_cycles.closed_at` menandai siklus yang sudah ditutup saat rollover; `checkin_signals.previous_status` + `previous_last_signal_at` menyimpan snapshot agar "Batalkan 10 menit" bisa memulihkan status. Semua model punya index untuk query dasbor (`units.sub_district_id`, `units.current_status`, `checkin_signals.cycle_id`, `visit_confirmations.unit_id,verified_at`). `message_drafts` unik per `(cycle_id, unit_id)`. Migrasi awal: `prisma/migrations/20261127000000_init`.
 
 ## Aturan perubahan status
 | Dari | Ke | Oleh |

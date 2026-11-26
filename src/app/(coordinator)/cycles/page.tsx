@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CyclesClient } from "@/components/coordinator/CyclesClient";
-import { PageSkeleton } from "@/components/ui/EmptyState";
+import { PageSkeleton } from "@/components/common/EmptyState";
 
 export const metadata: Metadata = { title: "Cycle & messages" };
 
