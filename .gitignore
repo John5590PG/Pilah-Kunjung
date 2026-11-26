@@ -1,8 +1,36 @@
+# Dependencies and build output
 node_modules
-.env
-.env.*.local
 .next
-next-env.d.ts
+out
 *.tsbuildinfo
-.vercel
+next-env.d.ts
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
+
+# Logs and local databases
+*.log
+npm-debug.log*
+*.sqlite
+*.sqlite-*
+*.db
+
+# Local Docker overrides (may contain credentials)
+docker-compose.override.yml
+
+# Editors and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Stray screenshots from screen capture tools
 FireShot Capture *.png
