@@ -153,6 +153,7 @@ flowchart TB
 | `src/app/page.tsx` + `src/components/landing/*` | Landing dipecah per section; teks/data ada di `landing/content.tsx` |
 | `src/components/ui/*` | Primitive shadcn (huruf kecil), dipisah dari komponen aplikasi di `common/` |
 | `DashboardClient`, `CyclesClient`, `UnitDetailClient`, `BigChoiceButton`, `CheckinClient` | Penerapan hover kontras, chip, dan sudut Fibonacci pada tabel, kartu, form, dan tombol |
+| `SettingsClient.tsx` | Workspace admin: editor bobot + panel nilai aktif/catatan/status. Field 48 px dengan label terlihat, validasi di bawah field, satu baris status, hover/focus mengikuti sistem. Teks kebijakan tetap jujur (heuristik belum divalidasi, angka dummy) |
 
 ### Aset yang dipakai
 
