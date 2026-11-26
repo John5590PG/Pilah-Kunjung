@@ -133,7 +133,7 @@ export function SettingsClient() {
 
   if (mode === "loading") {
     return (
-      <div className="mx-auto max-w-5xl">
+      <div className="w-full">
         <h1 className="text-3xl font-extrabold">Pengaturan</h1>
         <p className="mt-4 text-sm text-muted">Mendeteksi mode data…</p>
       </div>
@@ -152,7 +152,7 @@ export function SettingsClient() {
   const shownRows = activeRows.length > 0 ? activeRows : demoRows;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="w-full">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
