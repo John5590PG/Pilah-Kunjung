@@ -23,3 +23,9 @@ export function score(u: UnitInput, cfg: Cfg): number | null {
 | C | 0 | Operating | 1 bulan | 0 |
 ## Tes wajib (tests/ranking)
 Closed dikecualikan; seri dipecah last_signal_at; bobot dari settings; batas 3 dan 6 bulan; unit tanpa riwayat.
+
+## Mitigasi Klaim Beroperasi Semu (False-Positive Self-Reporting)
+Untuk mengantisipasi pengurus yang mengetuk `Beroperasi` agar cepat selesai atau sungkan (*courtesy tap*) tanpa merusak target check-in `<10` detik (tanpa wajib unggah foto GPS tiap bulan), sistem menerapkan tiga lapis pertahanan:
+1. **Insentif Sosial Tanpa Sanksi:** Pengurus bekerja sukarela tanpa honor rutin (`Noerchaisna & Marom, 2025`; `Situmeang et al., 2023`). Status `Dijeda` memicu bantuan pendampingan atau mitra pengepul (Perwalkot Semarang 103/2021 Pasal 41g), sedangkan `Tutup` menghentikan pengingat bulanan setelah konfirmasi korcam.
+2. **Isolasi `monthsSinceContact` (`B_kunjungan`) dari Ketukan Pengurus:** Di `src/lib/ranking/index.ts`, ketukan pengurus hanya memperbarui `last_signal_at` (`checkin_signals`), sedangkan `last_visited_at` (`monthsSinceContact`) **hanya di-reset oleh verifikasi korcam/DLH (`visit_confirmations`)**. Unit yang terus mengetuk `Beroperasi` tanpa pernah diverifikasi `>6` bulan tetap memperoleh `B_kunjungan = +2` agar terambil untuk uji petik berkala (*spot-check*) saat antrean mendesak mereda.
+3. **Pemeriksaan Silang Pasif (*Zero-Burden Cross-Check*):** Korcam (yang juga pengurus bank sampah di kecamatan sama) dan Bank Sampah Induk (BSI) kecamatan dapat mencocokkan klaim `Beroperasi` beruntun dengan catatan riwayat jemputan sampah kering serta laporan kemitraan 6-bulanan (Permen LHK No. 14/2021 Pasal 15 ayat 4 & Lampiran IV).

@@ -89,7 +89,7 @@ export function UnitDetailClient() {
         <div>
           <h1 className="text-3xl font-black tracking-tight text-ink">{unit.name}</h1>
           <p className="text-sm text-muted">
-            Kelurahan {unit.kelurahan} · Kontak pengurus: <span className="font-mono">{unit.contact}</span>{" "}
+            {unit.kelurahan} · Kontak pengurus: <span className="font-mono">{unit.contact}</span>{" "}
             <span className="text-xs text-muted/70">(nomor sintetis)</span>
           </p>
         </div>
@@ -169,7 +169,7 @@ export function UnitDetailClient() {
                   className="h-full w-full object-cover group-hover:scale-102 transition-transform duration-300"
                 />
                 <div className="absolute bottom-2 left-2 bg-spruce/85 backdrop-blur-xs text-white text-[10px] font-mono px-2 py-0.5 rounded-sm tracking-wider uppercase">
-                  Titik Kumpul: Kelurahan {unit.kelurahan}
+                  Titik Kumpul: {unit.kelurahan}
                 </div>
               </div>
             </div>

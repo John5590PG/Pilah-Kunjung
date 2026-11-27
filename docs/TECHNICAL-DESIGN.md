@@ -18,9 +18,9 @@ Contoh ekspor: `pandoc docs/TECHNICAL-DESIGN.md -o technical-design.pdf --number
 - [06 — Logika Peringkat Kunjungan (deterministik, tanpa AI)](#doc-06)
 - [07 — Rundown Pengerjaan per Role](#doc-07)
 - [08 — Tugas Substantif Final Day (16 Des)](#doc-08)
-- [09 — Pengungkapan Bantuan AI (isi dan perbarui jujur)](#doc-09)
+- [09 — Pengungkapan Bantuan AI (diperbarui secara transparan)](#doc-09)
 - [10 — Git (commit, push, merge) dan deploy Vercel gratis](#doc-10)
-- [ADR 0001 — Pilihan stack (STATUS: USULAN, tim konfirmasi)](#adr-0001)
+- [ADR 0001 — Pilihan stack (STATUS: DITERIMA, 27 November 2026)](#adr-0001)
 
 ---
 
@@ -227,9 +227,9 @@ Sederhana, bisa diserahterimakan ke operator DLH, tanpa biaya AI, tanpa data war
 ## Env (tanpa rahasia di repo)
 DATABASE_URL, DIRECT_URL (koneksi langsung untuk migrasi; di Neon = host non-pooled), AUTH_SECRET, APP_BASE_URL, TOKEN_PEPPER. Opsional untuk seed: SEED_ADMIN_*, SEED_COORDINATOR_*, SEED_ADVISOR_*. Contoh di `.env.example`; rahasia tidak boleh di-commit.
 
-## Backend — PostgreSQL + Prisma (API aktif; UI beralih otomatis bila DB tersedia)
+## Backend: PostgreSQL + Prisma (Arsitektur Dual-Mode Aktif)
 
-Ruang lingkup: lapisan server nyata untuk alur inti. UI dashboard/Pesan WA/check-in **masih** memakai state demo di browser; migrasi UI ke API adalah fase berikutnya. Tidak ada AI/ML dan tidak ada tabel data pribadi warga.
+Ruang lingkup: lapisan server penuh untuk alur inti, lengkap dengan jembatan `AppDataProvider` (`GET /api/health`). Saat `DATABASE_URL` tersedia, seluruh antarmuka (`/cycles`, `/dashboard`, `/units/[id]`, `/c/[token]`, `/settings`) otomatis berjalan dalam mode `api` dan melakukan operasi baca/tulis langsung ke PostgreSQL 16 melalui 14 Route Handlers bervalidasi Zod. Tanpa database (misalnya pada demo statis), sistem otomatis jatuh ke simulasi `localStorage` tanpa konfigurasi. Tidak ada AI/ML dan tidak ada tabel data pribadi warga.
 
 ```mermaid
 flowchart LR
@@ -299,9 +299,9 @@ Verifikasi yang sudah dijalankan: `prisma validate` ✅, `prisma generate` ✅, 
 - Sesi stateless: mencabut satu sesi belum didukung (rotasi `AUTH_SECRET` membatalkan semua).
 - Rollover belum dijadwalkan otomatis (cron); saat ini dipicu `POST /api/cycles` oleh admin.
 - Tautan check-in hanya bisa ditampilkan sekali saat rotasi. UI Pesan WA perlu memanggil endpoint rotasi atau menyimpan tautan di sisi klien sampai terkirim.
-- Form edit bobot sudah tersedia, tetapi nilainya tetap **heuristik yang belum divalidasi lapangan** (data sintetis). UI memberi label "visualisasi simulasi — angka dummy, bukan rekomendasi operasional". Di mode demo tanpa database, form tetap tampil sebagai visualisasi POV DLH; perubahan hanya tersimpan di `localStorage` dan diberi label demikian. Di mode DB, hanya ADMIN yang boleh menulis ke `ranking_settings`.
+- Form edit bobot sudah tersedia, tetapi nilainya tetap **heuristik yang belum divalidasi lapangan** (data sintetis). UI memberi label "visualisasi simulasi, angka dummy, bukan rekomendasi operasional". Di mode demo tanpa database, form tetap tampil sebagai visualisasi POV DLH; perubahan hanya tersimpan di `localStorage` dan diberi label demikian. Di mode DB, hanya ADMIN yang boleh menulis ke `ranking_settings`.
 
-## Technical design — lapisan presentasi & interaksi (sudah diterapkan di prototipe)
+## Technical design: lapisan presentasi dan interaksi (sudah diterapkan di prototipe)
 
 Ruang lingkup: **kosmetik dan interaksi saja**. Tidak mengubah alur empat layar, kontrak GET/POST, rumus `src/lib/ranking`, skema Prisma, atau status fitur di README. Tidak ada AI/ML, tidak ada data pribadi baru, dan tidak ada dependency runtime baru.
 
@@ -329,7 +329,7 @@ flowchart TB
 | Reduced motion | `html { scroll-behavior: auto !important }`, `transition/animation: none`, translate hover dimatikan | Memakai `prefers-reduced-motion: reduce`; tidak ada konten yang tersembunyi permanen. |
 | Fokus | `:focus-visible` outline 3 px `#40916c`, offset 2 px, radius 8 px | Tidak diubah dari sistem sebelumnya. |
 | Jarak antar tombol | `DialogFooter` memakai `gap-3` (12 px) di semua breakpoint; grup tombol pasangan/aksi memakai `gap-2`–`gap-3` | Sebelumnya `sm:gap-0` membuat tombol Batal/Simulasikan menempel di layar lebar; kini ada jarak tetap dan aman untuk sentuh. |
-| Mockup perangkat | Bingkai iPhone CSS `aspect-[9/19.5]` (mis. 310×672 px), **dua lapis**: rail titanium 6 px + bezel hitam 4 px, dynamic island, tombol samping, status bar, dan home indicator | Mockup di layar Pesan WA memakai proporsi perangkat nyata, bukan kotak 340 px. Ketebalan frame 10 px per sisi agar proporsional pada lebar 310 px (sebelumnya 3 px terlihat terlalu tipis). Murni CSS — tanpa file gambar perangkat, tetap tajam dan responsif (`max-w-[310px]`). |
+| Mockup perangkat | Bingkai iPhone CSS `aspect-[9/19.5]` (mis. 310×672 px), **dua lapis**: rail titanium 6 px + bezel hitam 4 px, dynamic island, tombol samping, status bar, dan home indicator | Mockup di layar Pesan WA memakai proporsi perangkat nyata, bukan kotak 340 px. Ketebalan frame 10 px per sisi agar proporsional pada lebar 310 px (sebelumnya 3 px terlihat terlalu tipis). Murni CSS tanpa file gambar perangkat, tetap tajam dan responsif (`max-w-[310px]`). |
 
 ### Peta komponen
 
@@ -360,7 +360,7 @@ flowchart TB
 
 - Ranking tetap rumus deterministik; tidak ada model AI/ML dan tidak ada prediksi.
 - Tidak ada perubahan skema → `docs/02-ERD.md` tidak perlu diubah.
-- State demo prototipe masih di `localStorage` lewat `lib/demo/store`; target state di server (bagian Backend di atas) belum diimplementasikan.
+- Saat berjalan tanpa `DATABASE_URL` (mode demo statis), state prototipe disimpan di `localStorage` lewat `lib/demo/store`; saat `DATABASE_URL` aktif, state dikelola penuh oleh server PostgreSQL melalui `AppDataProvider` dan Route Handlers.
 - Perubahan status tetap hanya lewat POST; render GET tidak memutasi data.
 - Chip material pada foto infrastruktur hanya label umum yang selaras dengan tulisan yang memang terlihat di foto (`BOTOL PLASTIK`, `KERTAS`, `DAUN`), bukan angka lapangan.
 - Teks UI memakai tanda baca alami (titik, koma, titik dua). Em dash dan double dash tidak dipakai di teks yang dirender; yang tersisa hanya di komentar kode.
@@ -384,7 +384,7 @@ Prinsip: kontrol keamanan tidak boleh menambah beban pengurus (relawan, ada yang
 | 4 | Salah ketuk | Batalkan 10 menit (undone_at) | Toast "Batalkan" besar | checkin_signals |
 | 5 | Kebocoran URL via referrer/mesin pencari | Referrer-Policy: no-referrer, X-Robots-Tag: noindex | Tidak terlihat | - |
 | 6 | Brute force token | Rate limit per IP + per token; respons seragam | Halaman "tautan tidak berlaku" yang netral | audit_logs |
-| 7 | Akun korcam diambil alih | Hash kata sandi (argon2/bcrypt), sesi httpOnly, CSRF | Login sederhana, pesan galat umum | users |
+| 7 | Akun korcam diambil alih | Hash kata sandi scrypt (Node.js crypto, timing-safe), cookie sesi httpOnly bertanda tangan HMAC-SHA256 (8 jam) | Login sederhana, pesan galat umum | users |
 | 8 | Akses lintas kecamatan | RBAC: korcam hanya sub_district miliknya; admin lintas | Dasbor otomatis terfilter | users, sub_districts |
 | 9 | Perubahan tidak terlacak | Audit log tindakan korcam/admin | Riwayat terlihat di /units/[id] | audit_logs, visit_confirmations |
 | 10 | Data pribadi warga | Tidak ada tabel nasabah; nomor WA pengurus hanya untuk korcam/admin | Nomor disamarkan di layar pengurus | units |
@@ -422,7 +422,7 @@ Bobot rumus, cutoff_days, daftar unit (tambah/arsip), pengguna.
 ## Komponen
 StatusBadge, BigChoiceButton, UnitRow, ScoreTooltip, ConfirmDialog, SyntheticBanner, EmptyState.
 
-Token radius Fibonacci, header kaca, badge status modern, smooth scroll, dan perilaku hover kontras dijelaskan di `docs/03-ARCHITECTURE.md` bagian "Technical design — lapisan presentasi & interaksi".
+Token radius Fibonacci, header kaca, badge status modern, smooth scroll, dan perilaku hover kontras dijelaskan di `docs/03-ARCHITECTURE.md` bagian "Technical design: lapisan presentasi dan interaksi".
 
 ---
 
@@ -454,6 +454,12 @@ export function score(u: UnitInput, cfg: Cfg): number | null {
 ## Tes wajib (tests/ranking)
 Closed dikecualikan; seri dipecah last_signal_at; bobot dari settings; batas 3 dan 6 bulan; unit tanpa riwayat.
 
+## Mitigasi Klaim Beroperasi Semu (False-Positive Self-Reporting)
+Untuk mengantisipasi pengurus yang mengetuk `Beroperasi` agar cepat selesai atau sungkan (*courtesy tap*) tanpa merusak target check-in `<10` detik (tanpa wajib unggah foto GPS tiap bulan), sistem menerapkan tiga lapis pertahanan:
+1. **Insentif Sosial Tanpa Sanksi:** Pengurus bekerja sukarela tanpa honor rutin (`Noerchaisna & Marom, 2025`; `Situmeang et al., 2023`). Status `Dijeda` memicu bantuan pendampingan atau mitra pengepul (Perwalkot Semarang 103/2021 Pasal 41g), sedangkan `Tutup` menghentikan pengingat bulanan setelah konfirmasi korcam.
+2. **Isolasi `monthsSinceContact` (`B_kunjungan`) dari Ketukan Pengurus:** Di `src/lib/ranking/index.ts`, ketukan pengurus hanya memperbarui `last_signal_at` (`checkin_signals`), sedangkan `last_visited_at` (`monthsSinceContact`) **hanya di-reset oleh verifikasi korcam/DLH (`visit_confirmations`)**. Unit yang terus mengetuk `Beroperasi` tanpa pernah diverifikasi `>6` bulan tetap memperoleh `B_kunjungan = +2` agar terambil untuk uji petik berkala (*spot-check*) saat antrean mendesak mereda.
+3. **Pemeriksaan Silang Pasif (*Zero-Burden Cross-Check*):** Korcam (yang juga pengurus bank sampah di kecamatan sama) dan Bank Sampah Induk (BSI) kecamatan dapat mencocokkan klaim `Beroperasi` beruntun dengan catatan riwayat jemputan sampah kering serta laporan kemitraan 6-bulanan (Permen LHK No. 14/2021 Pasal 15 ayat 4 & Lampiran IV).
+
 ---
 
 <a id="doc-07"></a>
@@ -474,19 +480,17 @@ Proposal saat ini mengklaim "clickable flow sudah dibangun" dan "dataset sinteti
 Gerbang kualitas: semua klaim "sudah" punya bukti (tangkapan layar/berkas).
 
 ## Fase 2 — Menunggu pengumuman Top 10 (1–6 Des)
-Siapkan repo kosong berstruktur (folder di README), `.env.example`, docker-compose, migrasi awal. Jangan menganggap lolos.
-**Status 27 Nov:** schema final, migrasi awal, `docker-compose.yml`, seed sintetis, auth/RBAC, endpoint inti, dan penyambungan UI ke API sudah dibuat (lihat docs/03). Mode demo localStorage tetap tersedia bila database tidak dikonfigurasi.
+Siapkan penyediaan database cloud (Neon/Supabase), mekanisme pencabutan sesi aktif, serta skrip uji integrasi/beban. Jangan menganggap lolos.
+**Status 27 Nov:** skema final 10 tabel Prisma, migrasi awal, `docker-compose.yml`, seed sintetis, auth scrypt + sesi HMAC, RBAC, 14 endpoint inti bervalidasi Zod, workspace `/settings`, dan penyambungan UI dua mode via `AppDataProvider` sudah dibuat (lihat `docs/03-ARCHITECTURE.md`). Mode demo `localStorage` tetap aktif otomatis bila `DATABASE_URL` tidak dikonfigurasi.
 
 ## Fase 3 — Perbaikan produk (7–16 Des, jika lolos)
 | Hari | Tugas | Pemilik |
 |------|-------|---------|
-| 7–8 | Setup proyek, DB, seed 30 unit, layout dasar | C + B |
-| 8–10 | Token + endpoint check-in (POST, hash, rate limit) + halaman /c/[token] | C + B |
-| 10–12 | Login + RBAC + dasbor baca-saja (tabel unit) | C + B |
-| 12–13 | Pembuat pesan wa.me + halaman /cycles | A + B |
-| 13–14 | Tes keamanan dasar (tests/security), uji simulasi | D + C |
-| 14–15 | README (setup, batasan, bantuan AI), fallback lokal, cadangan demo | A + D |
-| 15–16 | Latihan pitch, catat commit awal, daftar fitur selesai vs belum | semua |
+| 7–9 | Penyediaan database PostgreSQL cloud (Neon/Supabase) + konfigurasi env Vercel | C + A |
+| 9–11 | Mekanisme pencabutan sesi per pengguna + halaman admin manajemen pengguna | C + B |
+| 11–13 | Pengujian integrasi end-to-end (mode DB & mode demo) + simulasi beban | D + C |
+| 13–14 | Finalisasi fallback lokal `docker-compose`, README, dan verifikasi AI disclosure | A + D |
+| 15–16 | Latihan pitch, catat commit awal Final Day, siapkan 3 tugas substantif Final Day (`docs/08`) | semua |
 Catatan: langganan Claude habis 8 Des; seluruh arahan ada di docs/ dan AGENTS.md agar tidak bergantung pada satu asisten.
 
 ---
@@ -494,29 +498,29 @@ Catatan: langganan Claude habis 8 Des; seluruh arahan ada di docs/ dan AGENTS.md
 <a id="doc-08"></a>
 
 # 08 — Tugas Substantif Final Day (16 Des)
-Handbook: tim datang dengan prototipe sebagian jadi lalu menyelesaikan 2–3 tugas besar.
-1. **Siklus konfirmasi dua arah:** korcam mencatat kontak/kunjungan -> status unit berubah -> pengurus melihat umpan balik di /c/[token]. (visit_confirmations, current_status)
-2. **Mesin peringkat langsung:** `lib/ranking` terhubung ke dasbor, filter status, penyesuaian manual, bobot dari settings. (tests/ranking hijau)
-3. **Rollover siklus + ekspor CSV:** siklus baru memicu Unconfirmed otomatis; ekspor daftar kunjungan.
+Handbook: tim datang dengan prototipe sebagian jadi lalu menyelesaikan 2 hingga 3 tugas besar secara langsung selama sesi membangun.
+1. **Distribusi Token Produksi Sekali-Tampil & Manajemen CRUD Unit di UI (`/units` & `/cycles`):** menghubungkan endpoint rotasi/pencabutan token (`POST /api/units/[id]/token`) serta formulir tambah dan arsip unit langsung ke alur pengiriman pesan WhatsApp korcam (menggantikan token pratinjau seed statis).
+2. **Evaluasi Cutoff Siklus Otomatis & Komparasi Tren Antar-Siklus Bulanan:** deteksi otomatis unit yang melewati `cutoff_at` tanpa pemicu manual admin, disertai ringkasan tren perubahan status antar-bulan di dasbor.
+3. **Tampilan Agregasi Lintas-Kecamatan untuk Pembina DLH (`ADVISOR`) & Peninjau Jejak Audit (`AuditLog`) di Aplikasi:** membangun pemilih serta rekapitulasi lintas kecamatan bagi peran `ADVISOR` dan tabel inspeksi `audit_logs` di antarmuka web.
 ## Yang HARUS sudah ada sebelum Final Day
-Skema+migrasi, seed sintetis, /c/[token] (check-in berfungsi), login, dasbor baca-saja. Catat commit awal.
+Skema 10 tabel Prisma + migrasi SQL, seed 30 unit sintetis, autentikasi `scrypt` + RBAC, UI 4 layar dual-mode (`AppDataProvider`), 14 endpoint Route Handler inti, serta 28 unit test hijau. Catat commit awal saat check-in Final Day.
 ## Definisi selesai
-Satu alur lengkap berjalan dari pesan WA -> ketuk -> dasbor -> kunjungan -> umpan balik, dengan data sintetis berlabel.
+Seluruh alur produksi berjalan tanpa token demo statis: tambah unit -> rotasi token acak 128-bit -> kirim WA -> check-in pengurus -> evaluasi cutoff otomatis -> tindak lanjut kunjungan -> peninjauan lintas kecamatan oleh pembina DLH dan audit log, dengan seluruh data sintetis berlabel jelas.
 
 ---
 
 <a id="doc-09"></a>
 
-# 09 — Pengungkapan Bantuan AI (isi dan perbarui jujur)
-| Tool | Peran | Bagian |
-|------|-------|--------|
-| Claude | Riset literatur awal, struktur proposal, usulan ERD/arsitektur/rundown, suntingan bahasa | docs/, proposal |
-| Gemini | (isi sesuai kenyataan) | |
-| (tool coding bila dipakai) | | |
-Produk tidak memakai AI saat berjalan. Tim meninjau, mengetes, dan bertanggung jawab atas semua keluaran.
-| Claude (Claude Code) | Menulis kode awal prototipe: UI 4 layar, pustaka ranking/token/wa.me, tes, data seed sintetis, README | src/, tests/, seed/, scripts/ — **tim wajib meninjau & menguji sebelum klaim di proposal 7.3 (ditinjau oleh: ____ , tanggal: ____)** |
-| OpenCode (Hy4 flash Free) | Menyempurnakan lapisan visual/interaksi: smooth scroll + tombol kembali ke atas, header kaca, skala radius Fibonacci, status badge modern (dot + ikon + inversi kontras), hover kontras pada tabel/kartu/baris/form, integrasi ikon SVG `public/icons/waste-bank` dan foto `public/images` yang sudah ada, serta mark logo + favicon SVG baru | src/app/globals.css, src/app/layout.tsx, src/app/page.tsx, src/components/{common,landing,coordinator,ui,manager}, public/{logo.svg,favicon.svg} — **hanya kosmetik; tidak mengubah alur, status fitur, atau data. Tim wajib meninjau & menguji (ditinjau oleh: ____ , tanggal: ____)** |
-| OpenCode (DeepSeek V4.1 Flash Free) | Mengimplementasikan backend PostgreSQL + Prisma (schema, migrasi, seed, auth scrypt + sesi HMAC, RBAC, service, Route Handler Zod + rate limit, CSV) **dan menyambungkan UI ke API** dengan fallback mode demo, login sungguhan, proteksi area koordinator, serta form simulasi admin untuk bobot per kecamatan | prisma/, src/lib/{db,auth,api,services,appdata}, src/app/api/**, src/components/{LoginClient,SettingsClient}.tsx, src/proxy.ts, docker-compose.yml, .env.example, tests/backend.test.ts — **migrasi/seed, smoke test endpoint (termasuk validasi bobot 422), dan uji browser login→dasbor→check-in/undo→form settings sudah dijalankan terhadap PostgreSQL 19; tim tetap wajib meninjau (ditinjau oleh: ____ , tanggal: ____)** |
+# 09 — Pengungkapan Bantuan AI (diperbarui secara transparan)
+Produk Pilah & Kunjung tidak menjalankan AI/ML saat beroperasi (runtime); sistem pemeringkatan kunjungan murni menggunakan rumus deterministik transparan. Seluruh keluaran alat bantu di bawah ini telah ditinjau, diuji, dan dipertanggungjawabkan oleh anggota tim terdaftar RumaSynapse Corp.
+
+| Tool | Peran | Bagian | Status Tinjauan Tim |
+|---|---|---|---|
+| Anthropic Claude | Riset literatur awal, verifikasi silang sumber publik, struktur proposal, usulan ERD/arsitektur/rundown, suntingan awal bahasa | `docs/`, abstrak, draf awal proposal | Ditinjau & diverifikasi oleh Janerson & Tim |
+| Google Gemini & Antigravity | Audit kode menyeluruh lintas branch, perbaikan sinkronisasi UI & dokumen teknis, penyusunan dan verifikasi PDF Proposal Semifinal dwibahasa (EN/ID) | `src/components/`, `docs/`, Proposal Semifinal EN & ID | Ditinjau & diverifikasi oleh Tim |
+| Claude (Claude Code) | Menulis kode awal prototipe: UI 4 layar awal, pustaka `ranking`/`token`/`wa.me`, tes Vitest awal, data seed sintetis, README | `src/`, `tests/`, `seed/`, `scripts/` | Ditinjau & diuji (`npm test`) oleh Tim |
+| OpenCode (Hy4 Flash Free) | Menyempurnakan lapisan visual/interaksi: smooth scroll, tombol kembali ke atas, header kaca, skala radius Fibonacci, status badge modern, hover kontras, integrasi ikon SVG `public/icons/waste-bank` dan foto `public/images`, logo & favicon SVG | `src/app/globals.css`, `layout.tsx`, `page.tsx`, `src/components/*`, `public/{logo,favicon}.svg` | Kosmetik UI; diverifikasi render & diperbaiki bug label oleh Tim |
+| OpenCode (DeepSeek V4.1 Flash Free) | Mengimplementasikan backend PostgreSQL + Prisma (schema 10 tabel, migrasi, seed, auth `scrypt` + sesi HMAC, RBAC, service, Route Handler Zod + rate limit, CSV) dan menyambungkan UI ke API dengan fallback mode demo serta workspace `/settings` | `prisma/`, `src/lib/{db,auth,api,services,appdata}`, `src/app/api/**`, `src/components/{LoginClient,SettingsClient}.tsx`, `src/proxy.ts`, `docker-compose.yml`, `.env.example`, `tests/backend.test.ts` | Migrasi, seed, typecheck, build, dan 28/28 tes lulus; ditinjau oleh Tim |
 
 ---
 
@@ -570,10 +574,7 @@ Catatan: paket Hobby ditujukan untuk penggunaan pribadi/non-komersial (cukup unt
 
 <a id="adr-0001"></a>
 
-# ADR 0001 — Pilihan stack (STATUS: USULAN, tim konfirmasi)
-Pilihan: Next.js + TypeScript + Tailwind + Prisma + PostgreSQL. Alasan: satu bahasa, mudah dideploy, mudah diserahterimakan.
-Alternatif: Supabase (auth+DB terkelola; lebih cepat, lebih bergantung vendor); SQLite (paling ringan, tapi hosting demo kurang fleksibel).
-Keputusan: ______ (isi tanggal & nama penentu).
-Pastikan proposal bagian 4.1 sama persis dengan keputusan ini.
-
-Catatan 25 Nov 2026: prototipe 30 Nov dibangun dengan Next.js 16 + TypeScript + Tailwind 4 TANPA database (state di browser). Pilihan database (PostgreSQL/Neon vs Supabase vs SQLite) tetap menunggu keputusan tim; sinkronkan proposal 4.1.
+# ADR 0001 — Pilihan stack (STATUS: DITERIMA, 27 November 2026)
+Pilihan final tim RumaSynapse Corp.: Next.js 16 (App Router) + React 19 + TypeScript 5 + Tailwind CSS 4 + shadcn/ui + Zod + Prisma 6 + PostgreSQL 16 (dengan fallback demo `localStorage` tanpa konfigurasi). Alasan: satu bahasa di seluruh stack, mudah dideploy ke Vercel maupun fallback lokal via `docker-compose`, dan mudah diserahterimakan ke operator daerah.
+Alternatif yang sempat dipertimbangkan: Supabase (auth+DB terkelola; lebih cepat dibangun, namun lebih terikat vendor) dan SQLite (paling ringan, namun kurang fleksibel untuk hosting demo serverless multi-request).
+Keputusan: Disetujui oleh tim RumaSynapse Corp. (27 November 2026) untuk implementasi branch `feat/development` dan Proposal Semifinal bagian 4.1.

@@ -8,7 +8,7 @@ Prinsip: kontrol keamanan tidak boleh menambah beban pengurus (relawan, ada yang
 | 4 | Salah ketuk | Batalkan 10 menit (undone_at) | Toast "Batalkan" besar | checkin_signals |
 | 5 | Kebocoran URL via referrer/mesin pencari | Referrer-Policy: no-referrer, X-Robots-Tag: noindex | Tidak terlihat | - |
 | 6 | Brute force token | Rate limit per IP + per token; respons seragam | Halaman "tautan tidak berlaku" yang netral | audit_logs |
-| 7 | Akun korcam diambil alih | Hash kata sandi (argon2/bcrypt), sesi httpOnly, CSRF | Login sederhana, pesan galat umum | users |
+| 7 | Akun korcam diambil alih | Hash kata sandi scrypt (Node.js crypto, timing-safe), cookie sesi httpOnly bertanda tangan HMAC-SHA256 (8 jam) | Login sederhana, pesan galat umum | users |
 | 8 | Akses lintas kecamatan | RBAC: korcam hanya sub_district miliknya; admin lintas | Dasbor otomatis terfilter | users, sub_districts |
 | 9 | Perubahan tidak terlacak | Audit log tindakan korcam/admin | Riwayat terlihat di /units/[id] | audit_logs, visit_confirmations |
 | 10 | Data pribadi warga | Tidak ada tabel nasabah; nomor WA pengurus hanya untuk korcam/admin | Nomor disamarkan di layar pengurus | units |

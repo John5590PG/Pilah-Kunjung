@@ -26,7 +26,7 @@ export const STEPS = [
     num: "02",
     title: "Check-In 1 Ketukan",
     href: `/c/${demo.token}`,
-    desc: "Pengurus buka tautan di ponsel, tanpa login dan tanpa password. Pilih satu status: Beroperasi, Libur, atau Tutup. Selesai dalam 10 detik.",
+    desc: "Pengurus buka tautan di ponsel, tanpa login dan tanpa password. Pilih satu status: Beroperasi, Dijeda, atau Tutup. Selesai dalam 10 detik.",
     tag: "< 10 Detik",
     icon: Smartphone,
     iconBg: "bg-green-brand text-white",
@@ -61,7 +61,7 @@ export const STATS = [
 export const GUIDE_PENGURUS = [
   "Tunggu pesan WhatsApp dari koordinator setiap awal bulan",
   "Ketuk tautan dalam pesan, langsung terbuka di browser ponsel",
-  "Pilih satu status: Beroperasi, Libur, atau Tutup Permanen",
+  "Pilih satu status: Beroperasi, Dijeda, atau Tutup Permanen",
   "Selesai! Tidak ada login, tidak ada aplikasi yang perlu diinstall",
 ];
 
@@ -75,7 +75,7 @@ export const GUIDE_KOORDINATOR = [
 export const AUDIT_MATRIX = [
   { spec: "Alur 4 Layar Klik Interaktif", detail: "Mode demo memakai localStorage; mode DB memakai PostgreSQL lewat API", status: "Works (Simulasi)", tier: "live" },
   { spec: "4 Status Siklus & Fitur Pembatalan", detail: "Operating, Paused, Closed (konfirmasi 2 tahap), pembatalan 10 menit", status: "Works (Simulasi)", tier: "live" },
-  { spec: "Mesin Kalkulasi Prioritas Kunjungan", detail: "Algoritma deterministik 3×M + W + B diuji dengan unit test", status: "Library + Tests", tier: "tested" },
+  { spec: "Mesin Kalkulasi Prioritas Kunjungan", detail: "Algoritma deterministik 2×M + W + B diuji dengan unit test", status: "Library + Tests", tier: "tested" },
   { spec: "Keamanan Token & Idempotensi", detail: "Hash SHA-256 (128-bit entropy), rate limiter, GET aman anti-crawler WA", status: "Library + Tests", tier: "tested" },
   { spec: "Basis Data & Rollover Siklus", detail: "PostgreSQL, Prisma, sesi RBAC, rollover dipicu admin (cron belum)", status: "Works (DB)", tier: "live" },
   { spec: "Integrasi WhatsApp Business API", detail: "Pengiriman pesan otomatis terintegrasi langsung ke nomor pengurus", status: "Planned (Fase 2 dan 3)", tier: "planned" },
