@@ -35,9 +35,9 @@ Sederhana, bisa diserahterimakan ke operator DLH, tanpa biaya AI, tanpa data war
 ## Env (tanpa rahasia di repo)
 DATABASE_URL, DIRECT_URL (koneksi langsung untuk migrasi; di Neon = host non-pooled), AUTH_SECRET, APP_BASE_URL, TOKEN_PEPPER. Opsional untuk seed: SEED_ADMIN_*, SEED_COORDINATOR_*, SEED_ADVISOR_*. Contoh di `.env.example`; rahasia tidak boleh di-commit.
 
-## Backend — PostgreSQL + Prisma (API aktif; UI beralih otomatis bila DB tersedia)
+## Backend: PostgreSQL + Prisma (Arsitektur Dual-Mode Aktif)
 
-Ruang lingkup: lapisan server nyata untuk alur inti. UI dashboard/Pesan WA/check-in **masih** memakai state demo di browser; migrasi UI ke API adalah fase berikutnya. Tidak ada AI/ML dan tidak ada tabel data pribadi warga.
+Ruang lingkup: lapisan server penuh untuk alur inti, lengkap dengan jembatan `AppDataProvider` (`GET /api/health`). Saat `DATABASE_URL` tersedia, seluruh antarmuka (`/cycles`, `/dashboard`, `/units/[id]`, `/c/[token]`, `/settings`) otomatis berjalan dalam mode `api` dan melakukan operasi baca/tulis langsung ke PostgreSQL 16 melalui 14 Route Handlers bervalidasi Zod. Tanpa database (misalnya pada demo statis), sistem otomatis jatuh ke simulasi `localStorage` tanpa konfigurasi. Tidak ada AI/ML dan tidak ada tabel data pribadi warga.
 
 ```mermaid
 flowchart LR
@@ -107,9 +107,9 @@ Verifikasi yang sudah dijalankan: `prisma validate` ✅, `prisma generate` ✅, 
 - Sesi stateless: mencabut satu sesi belum didukung (rotasi `AUTH_SECRET` membatalkan semua).
 - Rollover belum dijadwalkan otomatis (cron); saat ini dipicu `POST /api/cycles` oleh admin.
 - Tautan check-in hanya bisa ditampilkan sekali saat rotasi. UI Pesan WA perlu memanggil endpoint rotasi atau menyimpan tautan di sisi klien sampai terkirim.
-- Form edit bobot sudah tersedia, tetapi nilainya tetap **heuristik yang belum divalidasi lapangan** (data sintetis). UI memberi label "visualisasi simulasi — angka dummy, bukan rekomendasi operasional". Di mode demo tanpa database, form tetap tampil sebagai visualisasi POV DLH; perubahan hanya tersimpan di `localStorage` dan diberi label demikian. Di mode DB, hanya ADMIN yang boleh menulis ke `ranking_settings`.
+- Form edit bobot sudah tersedia, tetapi nilainya tetap **heuristik yang belum divalidasi lapangan** (data sintetis). UI memberi label "visualisasi simulasi, angka dummy, bukan rekomendasi operasional". Di mode demo tanpa database, form tetap tampil sebagai visualisasi POV DLH; perubahan hanya tersimpan di `localStorage` dan diberi label demikian. Di mode DB, hanya ADMIN yang boleh menulis ke `ranking_settings`.
 
-## Technical design — lapisan presentasi & interaksi (sudah diterapkan di prototipe)
+## Technical design: lapisan presentasi dan interaksi (sudah diterapkan di prototipe)
 
 Ruang lingkup: **kosmetik dan interaksi saja**. Tidak mengubah alur empat layar, kontrak GET/POST, rumus `src/lib/ranking`, skema Prisma, atau status fitur di README. Tidak ada AI/ML, tidak ada data pribadi baru, dan tidak ada dependency runtime baru.
 
@@ -137,7 +137,7 @@ flowchart TB
 | Reduced motion | `html { scroll-behavior: auto !important }`, `transition/animation: none`, translate hover dimatikan | Memakai `prefers-reduced-motion: reduce`; tidak ada konten yang tersembunyi permanen. |
 | Fokus | `:focus-visible` outline 3 px `#40916c`, offset 2 px, radius 8 px | Tidak diubah dari sistem sebelumnya. |
 | Jarak antar tombol | `DialogFooter` memakai `gap-3` (12 px) di semua breakpoint; grup tombol pasangan/aksi memakai `gap-2`–`gap-3` | Sebelumnya `sm:gap-0` membuat tombol Batal/Simulasikan menempel di layar lebar; kini ada jarak tetap dan aman untuk sentuh. |
-| Mockup perangkat | Bingkai iPhone CSS `aspect-[9/19.5]` (mis. 310×672 px), **dua lapis**: rail titanium 6 px + bezel hitam 4 px, dynamic island, tombol samping, status bar, dan home indicator | Mockup di layar Pesan WA memakai proporsi perangkat nyata, bukan kotak 340 px. Ketebalan frame 10 px per sisi agar proporsional pada lebar 310 px (sebelumnya 3 px terlihat terlalu tipis). Murni CSS — tanpa file gambar perangkat, tetap tajam dan responsif (`max-w-[310px]`). |
+| Mockup perangkat | Bingkai iPhone CSS `aspect-[9/19.5]` (mis. 310×672 px), **dua lapis**: rail titanium 6 px + bezel hitam 4 px, dynamic island, tombol samping, status bar, dan home indicator | Mockup di layar Pesan WA memakai proporsi perangkat nyata, bukan kotak 340 px. Ketebalan frame 10 px per sisi agar proporsional pada lebar 310 px (sebelumnya 3 px terlihat terlalu tipis). Murni CSS tanpa file gambar perangkat, tetap tajam dan responsif (`max-w-[310px]`). |
 
 ### Peta komponen
 
@@ -168,7 +168,7 @@ flowchart TB
 
 - Ranking tetap rumus deterministik; tidak ada model AI/ML dan tidak ada prediksi.
 - Tidak ada perubahan skema → `docs/02-ERD.md` tidak perlu diubah.
-- State demo prototipe masih di `localStorage` lewat `lib/demo/store`; target state di server (bagian Backend di atas) belum diimplementasikan.
+- Saat berjalan tanpa `DATABASE_URL` (mode demo statis), state prototipe disimpan di `localStorage` lewat `lib/demo/store`; saat `DATABASE_URL` aktif, state dikelola penuh oleh server PostgreSQL melalui `AppDataProvider` dan Route Handlers.
 - Perubahan status tetap hanya lewat POST; render GET tidak memutasi data.
 - Chip material pada foto infrastruktur hanya label umum yang selaras dengan tulisan yang memang terlihat di foto (`BOTOL PLASTIK`, `KERTAS`, `DAUN`), bukan angka lapangan.
 - Teks UI memakai tanda baca alami (titik, koma, titik dua). Em dash dan double dash tidak dipakai di teks yang dirender; yang tersisa hanya di komentar kode.

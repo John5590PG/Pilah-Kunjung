@@ -14,17 +14,15 @@ Proposal saat ini mengklaim "clickable flow sudah dibangun" dan "dataset sinteti
 Gerbang kualitas: semua klaim "sudah" punya bukti (tangkapan layar/berkas).
 
 ## Fase 2 — Menunggu pengumuman Top 10 (1–6 Des)
-Siapkan repo kosong berstruktur (folder di README), `.env.example`, docker-compose, migrasi awal. Jangan menganggap lolos.
-**Status 27 Nov:** schema final, migrasi awal, `docker-compose.yml`, seed sintetis, auth/RBAC, endpoint inti, dan penyambungan UI ke API sudah dibuat (lihat docs/03). Mode demo localStorage tetap tersedia bila database tidak dikonfigurasi.
+Siapkan penyediaan database cloud (Neon/Supabase), mekanisme pencabutan sesi aktif, serta skrip uji integrasi/beban. Jangan menganggap lolos.
+**Status 27 Nov:** skema final 10 tabel Prisma, migrasi awal, `docker-compose.yml`, seed sintetis, auth scrypt + sesi HMAC, RBAC, 14 endpoint inti bervalidasi Zod, workspace `/settings`, dan penyambungan UI dua mode via `AppDataProvider` sudah dibuat (lihat `docs/03-ARCHITECTURE.md`). Mode demo `localStorage` tetap aktif otomatis bila `DATABASE_URL` tidak dikonfigurasi.
 
 ## Fase 3 — Perbaikan produk (7–16 Des, jika lolos)
 | Hari | Tugas | Pemilik |
 |------|-------|---------|
-| 7–8 | Setup proyek, DB, seed 30 unit, layout dasar | C + B |
-| 8–10 | Token + endpoint check-in (POST, hash, rate limit) + halaman /c/[token] | C + B |
-| 10–12 | Login + RBAC + dasbor baca-saja (tabel unit) | C + B |
-| 12–13 | Pembuat pesan wa.me + halaman /cycles | A + B |
-| 13–14 | Tes keamanan dasar (tests/security), uji simulasi | D + C |
-| 14–15 | README (setup, batasan, bantuan AI), fallback lokal, cadangan demo | A + D |
-| 15–16 | Latihan pitch, catat commit awal, daftar fitur selesai vs belum | semua |
+| 7–9 | Penyediaan database PostgreSQL cloud (Neon/Supabase) + konfigurasi env Vercel | C + A |
+| 9–11 | Mekanisme pencabutan sesi per pengguna + halaman admin manajemen pengguna | C + B |
+| 11–13 | Pengujian integrasi end-to-end (mode DB & mode demo) + simulasi beban | D + C |
+| 13–14 | Finalisasi fallback lokal `docker-compose`, README, dan verifikasi AI disclosure | A + D |
+| 15–16 | Latihan pitch, catat commit awal Final Day, siapkan 3 tugas substantif Final Day (`docs/08`) | semua |
 Catatan: langganan Claude habis 8 Des; seluruh arahan ada di docs/ dan AGENTS.md agar tidak bergantung pada satu asisten.

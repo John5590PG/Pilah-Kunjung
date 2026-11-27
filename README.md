@@ -1,4 +1,4 @@
-# Pilah & Kunjung — A Lightweight Activity Check-In for Semarang's Waste Banks
+# Pilah & Kunjung: A Lightweight Activity Check-In for Semarang's Waste Banks
 Tim: RumaSynapse Corp. | STACK 2026 (Case 2) | Pilot: Kecamatan Gunungpati
 
 > **Semua data = SINTETIS (simulasi).** Tidak ada bank sampah asli, tidak ada data warga. Tidak ada AI/ML di dalam produk.
@@ -6,12 +6,13 @@ Tim: RumaSynapse Corp. | STACK 2026 (Case 2) | Pilot: Kecamatan Gunungpati
 ## Status jujur (per 27 Nov 2026)
 | Bagian | Status |
 |---|---|
-| Alur 4 layar yang bisa diklik (pesan WA → check-in 1 ketukan → dasbor → catat kunjungan → umpan balik) | **Berfungsi, tersimulasi** — state disimpan di browser (localStorage), tanpa server |
-| 4 status unit, Batalkan 10 menit, konfirmasi dua langkah untuk Closed, ekspor CSV (sisi klien), simulasi pergantian siklus | Berfungsi, tersimulasi |
-| Peringkat kunjungan `src/lib/ranking`, token `src/lib/security`, pembuat tautan wa.me, rate limiter | Pustaka + tes (`npm test`); rate limiter kini dipakai endpoint backend |
+| Alur 4 layar yang bisa diklik (pesan WA → check-in 1 ketukan → dasbor → catat kunjungan → umpan balik) | **Berfungsi (Dual-Mode):** memakai API PostgreSQL bila `DATABASE_URL` aktif, atau otomatis fallback ke simulasi browser (`localStorage`) |
+| 4 status unit, Batalkan 10 menit, konfirmasi dua langkah untuk Closed, ekspor CSV (klien & server), simulasi pergantian siklus | **Berfungsi** di mode demo maupun PostgreSQL |
+| Peringkat kunjungan `src/lib/ranking`, token `src/lib/security`, pembuat tautan wa.me, rate limiter | Pustaka + tes (`npm test`, 28 tes); rate limiter aktif pada endpoint backend |
 | Header `Referrer-Policy: no-referrer` pada `/c/*`, `noindex` | Ada (`next.config.ts`) |
-| Database PostgreSQL/Prisma, login & RBAC, endpoint POST server, rotasi/cabut tautan, rollover siklus | **Berfungsi.** UI otomatis memakai API bila `DATABASE_URL` tersedia; tanpa itu tetap berjalan sebagai demo localStorage. Rollover masih dipicu manual (belum cron) |
-| Kirim WhatsApp sungguhan (WhatsApp Business API) | **Planned** — tetap memakai tautan `wa.me` |
+| Database PostgreSQL/Prisma (10 model), login `scrypt` & sesi HMAC + RBAC, 14 endpoint server, rotasi/cabut tautan, rollover siklus, editor bobot `/settings` | **Berfungsi** bila `DATABASE_URL` tersedia. Rollover masih dipicu manual oleh admin (cron otomatis belum) |
+| Integrasi produksi lanjutan (rotasi token sekali-tampil di alur `/cycles` + CRUD unit UI, cutoff otomatis, tampilan lintas-kecamatan ADVISOR & inspektor AuditLog) | **Planned (Tugas Final Day 16 Des, lihat `docs/08-FINAL-DAY-TASKS.md`)** |
+| Kirim WhatsApp sungguhan (WhatsApp Business API) | **Out-of-Scope / Planned jangka panjang:** tetap memakai tautan `wa.me` |
 
 Catatan: token di UI demo adalah token DEMO deterministik (`seed/README.md`). Di backend, token acak 128-bit dibuat saat rotasi dan hanya **hash SHA-256(+pepper)** yang disimpan; token mentah dikembalikan sekali. GET `/c/[token]` tidak mengubah data; perubahan hanya saat tombol diketuk.
 

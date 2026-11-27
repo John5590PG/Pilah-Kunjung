@@ -260,7 +260,7 @@ export function CyclesClient() {
                           </div>
 
                           <p className="text-[11px] text-zinc-700">
-                            Terima kasih, <i>Koordinator DLH</i>
+                            Terima kasih, <i>Korcam Gunungpati</i>
                           </p>
 
                           <div className="flex items-center justify-end gap-1 pt-0.5 text-[10px] text-zinc-500">

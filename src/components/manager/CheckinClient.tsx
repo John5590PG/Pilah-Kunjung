@@ -131,7 +131,7 @@ export function CheckinClient() {
       <div className="space-y-1">
         <p className="text-xs font-bold uppercase tracking-wider text-brand">Pilah &amp; Kunjung</p>
         <h1 className="text-2xl font-black tracking-tight text-ink leading-tight">{unit.name}</h1>
-        <p className="text-sm text-muted font-medium">Kelurahan {unit.kelurahan}</p>
+        <p className="text-sm text-muted font-medium">{unit.kelurahan}</p>
       </div>
 
       <section className="mt-6" aria-labelledby="q">
@@ -192,8 +192,8 @@ export function CheckinClient() {
             <BigChoiceButton
               tone="PAUSED"
               icon={<PauseIcon className="h-6 w-6 text-pa" />}
-              label="Libur Sementara"
-              hint="Berhenti sementara, namun berencana aktif lagi"
+              label="Dijeda"
+              hint="Libur atau berhenti sementara, berencana aktif lagi"
               selected={thisCycleSignal?.status === "PAUSED"}
               onClick={() => choose("PAUSED")}
             />

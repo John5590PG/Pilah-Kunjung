@@ -23,4 +23,4 @@ Bobot rumus, cutoff_days, daftar unit (tambah/arsip), pengguna.
 ## Komponen
 StatusBadge, BigChoiceButton, UnitRow, ScoreTooltip, ConfirmDialog, SyntheticBanner, EmptyState.
 
-Token radius Fibonacci, header kaca, badge status modern, smooth scroll, dan perilaku hover kontras dijelaskan di `docs/03-ARCHITECTURE.md` bagian "Technical design — lapisan presentasi & interaksi".
+Token radius Fibonacci, header kaca, badge status modern, smooth scroll, dan perilaku hover kontras dijelaskan di `docs/03-ARCHITECTURE.md` bagian "Technical design: lapisan presentasi dan interaksi".

@@ -60,7 +60,7 @@ export function AppNav() {
               Pilah &amp; Kunjung
             </span>
             <span className="text-[10px] font-medium text-muted tracking-wide">
-              DLH Kota Semarang
+              Pilot Kec. Gunungpati (Simulasi)
             </span>
           </div>
         </Link>

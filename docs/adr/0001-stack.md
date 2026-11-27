@@ -1,7 +1,4 @@
-# ADR 0001 — Pilihan stack (STATUS: USULAN, tim konfirmasi)
-Pilihan: Next.js + TypeScript + Tailwind + Prisma + PostgreSQL. Alasan: satu bahasa, mudah dideploy, mudah diserahterimakan.
-Alternatif: Supabase (auth+DB terkelola; lebih cepat, lebih bergantung vendor); SQLite (paling ringan, tapi hosting demo kurang fleksibel).
-Keputusan: ______ (isi tanggal & nama penentu).
-Pastikan proposal bagian 4.1 sama persis dengan keputusan ini.
-
-Catatan 25 Nov 2026: prototipe 30 Nov dibangun dengan Next.js 16 + TypeScript + Tailwind 4 TANPA database (state di browser). Pilihan database (PostgreSQL/Neon vs Supabase vs SQLite) tetap menunggu keputusan tim; sinkronkan proposal 4.1.
+# ADR 0001 — Pilihan stack (STATUS: DITERIMA, 27 November 2026)
+Pilihan final tim RumaSynapse Corp.: Next.js 16 (App Router) + React 19 + TypeScript 5 + Tailwind CSS 4 + shadcn/ui + Zod + Prisma 6 + PostgreSQL 16 (dengan fallback demo `localStorage` tanpa konfigurasi). Alasan: satu bahasa di seluruh stack, mudah dideploy ke Vercel maupun fallback lokal via `docker-compose`, dan mudah diserahterimakan ke operator daerah.
+Alternatif yang sempat dipertimbangkan: Supabase (auth+DB terkelola; lebih cepat dibangun, namun lebih terikat vendor) dan SQLite (paling ringan, namun kurang fleksibel untuk hosting demo serverless multi-request).
+Keputusan: Disetujui oleh tim RumaSynapse Corp. (27 November 2026) untuk implementasi branch `feat/development` dan Proposal Semifinal bagian 4.1.
