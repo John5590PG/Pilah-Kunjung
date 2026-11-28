@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAppData } from "@/lib/appdata/provider";
 import {
-  canUndo, findByToken, latestActiveSignal, latestVisit, UNDO_WINDOW_MS, type DemoSignal,
+  canUndo, cycleLabel, findByToken, latestActiveSignal, latestVisit, UNDO_WINDOW_MS, type DemoSignal,
 } from "@/lib/demo/state";
 import { periodLabelId } from "@/lib/whatsapp/build-link";
 import { dateId, timeId } from "@/lib/format";
-import { STATUS_ID, type ReportedStatus } from "@/lib/status";
+import { STATUS_ID, type ReportedStatus, type UnitStatus } from "@/lib/status";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CheckIcon, PauseIcon, XIcon } from "@/components/common/icons";
 import { PageSkeleton } from "@/components/common/EmptyState";
@@ -43,17 +43,27 @@ export function CheckinClient() {
     return () => clearInterval(t);
   }, []);
 
-  if (!state || (mode === "api" && tokenView === undefined)) return <Shell><PageSkeleton /></Shell>;
+  if (mode === "loading" || (mode === "demo" && !state) || (mode === "api" && tokenView === undefined)) {
+    return <Shell><PageSkeleton /></Shell>;
+  }
 
   // Same neutral page for wrong / expired / revoked links (docs/01 §D).
-  // API mode finds the unit by the id returned from the hashed-token lookup;
-  // the demo keeps matching the deterministic seed token locally.
+  // API mode builds the view directly from the public hashed-token lookup;
+  // demo mode matches the deterministic seed token in localStorage.
   const unit =
     mode === "api"
       ? tokenView
-        ? state.units.find((u) => u.id === tokenView.id)
+        ? {
+            id: tokenView.id,
+            name: tokenView.name,
+            kelurahan: tokenView.kelurahan,
+            status: tokenView.status as UnitStatus,
+            lastSignalAt: tokenView.lastSignalAt,
+          }
         : undefined
-      : findByToken(state, token);
+      : state
+        ? findByToken(state, token)
+        : undefined;
   if (!unit) {
     return (
       <Shell>
@@ -68,27 +78,28 @@ export function CheckinClient() {
     );
   }
 
+  const activeCycle = mode === "api" ? (tokenView?.cycle ?? cycleLabel(now)) : (state?.cycle ?? cycleLabel(now));
   const apiSignal: DemoSignal | undefined =
-    mode === "api" && tokenView?.signalAt && tokenView.cycle === state.cycle
+    mode === "api" && tokenView?.signalAt && tokenView.signalStatus
       ? {
           id: "api-signal",
           unitId: unit.id,
-          cycle: state.cycle,
-          status: tokenView.status as ReportedStatus,
+          cycle: activeCycle,
+          status: tokenView.signalStatus,
           at: tokenView.signalAt,
           undoneAt: null,
           before: {
             status: unit.status,
-            silentCycles: unit.silentCycles,
+            silentCycles: 0,
             lastSignalAt: unit.lastSignalAt,
-            signaledThisCycle: unit.signaledThisCycle,
+            signaledThisCycle: false,
           },
         }
       : undefined;
 
-  const signal = mode === "api" ? apiSignal : latestActiveSignal(state, unit.id);
-  const thisCycleSignal = signal && signal.cycle === state.cycle ? signal : undefined;
-  const undoable = canUndo(thisCycleSignal, now);
+  const signal = mode === "api" ? apiSignal : (state ? latestActiveSignal(state, unit.id) : undefined);
+  const thisCycleSignal = signal && signal.cycle === activeCycle ? signal : undefined;
+  const undoable = mode === "api" ? Boolean(tokenView?.canUndo && canUndo(thisCycleSignal, now)) : canUndo(thisCycleSignal, now);
   const undoUntil = thisCycleSignal ? new Date(Date.parse(thisCycleSignal.at) + UNDO_WINDOW_MS) : null;
   const apiVisit = mode === "api" && tokenView?.visit
     ? {
@@ -100,7 +111,7 @@ export function CheckinClient() {
         at: tokenView.visit.at,
       }
     : undefined;
-  const visit = mode === "api" ? apiVisit : latestVisit(state, unit.id);
+  const visit = mode === "api" ? apiVisit : (state ? latestVisit(state, unit.id) : undefined);
   const showChoices = !thisCycleSignal || changing;
 
   const choose = async (status: ReportedStatus) => {
@@ -139,7 +150,7 @@ export function CheckinClient() {
           Bagaimana kondisi aktivitas bank sampah bulan ini?
         </h2>
         <p className="text-xs text-muted font-medium mt-0.5">
-          Periode Laporan: <b>{periodLabelId(state.cycle)}</b>
+          Periode Laporan: <b>{periodLabelId(activeCycle)}</b>
         </p>
 
         {thisCycleSignal && (
@@ -192,8 +203,8 @@ export function CheckinClient() {
             <BigChoiceButton
               tone="PAUSED"
               icon={<PauseIcon className="h-6 w-6 text-pa" />}
-              label="Libur Sementara"
-              hint="Berhenti sementara, namun berencana aktif lagi"
+              label="Dijeda"
+              hint="Libur atau berhenti sementara, berencana aktif lagi"
               selected={thisCycleSignal?.status === "PAUSED"}
               onClick={() => choose("PAUSED")}
             />

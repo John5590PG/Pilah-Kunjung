@@ -7,8 +7,8 @@ import { prisma } from "@/lib/db/client";
 import { HttpError } from "@/lib/api/http";
 import { rankUnits, type ScoreBreakdown } from "@/lib/ranking";
 import type { SessionRole } from "@/lib/auth/session-token";
-import type { UnitStatus } from "@/lib/status";
-import { monthsBetween, periodLabelId, silentCyclesFor } from "./cycle-math";
+import type { ReportedStatus, UnitStatus } from "@/lib/status";
+import { countConsecutiveSilentCycles, monthsBetween, periodLabelId } from "./cycle-math";
 import { getRankingConfig } from "./settings";
 
 export interface Actor {
@@ -35,6 +35,15 @@ export interface UnitListItem {
   breakdown?: ScoreBreakdown;
 }
 
+export interface UnitSignalItem {
+  id: string;
+  unitId: string;
+  cycle: string;
+  status: ReportedStatus;
+  at: string;
+  undoneAt: string | null;
+}
+
 export interface UnitsResult {
   cycle: {
     label: string;
@@ -46,13 +55,8 @@ export interface UnitsResult {
   config: Awaited<ReturnType<typeof getRankingConfig>>;
   units: UnitListItem[];
   closed: UnitListItem[];
+  signals: UnitSignalItem[];
   generatedAt: string;
-}
-
-function maxDate(a: Date | null, b: Date | null): Date | null {
-  if (!a) return b;
-  if (!b) return a;
-  return a.getTime() >= b.getTime() ? a : b;
 }
 
 export function resolveScope(actor: Actor, requested?: string | null): string | undefined {
@@ -71,7 +75,10 @@ export async function listUnits(actor: Actor, requestedSubDistrict?: string | nu
 
   const [cycle, cycles, units, config] = await Promise.all([
     prisma.reportingCycle.findFirst({ orderBy: { openedAt: "desc" } }),
-    prisma.reportingCycle.findMany({ orderBy: { openedAt: "asc" }, select: { openedAt: true, closedAt: true } }),
+    prisma.reportingCycle.findMany({
+      orderBy: { openedAt: "asc" },
+      select: { id: true, periodLabel: true, openedAt: true, closedAt: true },
+    }),
     prisma.unit.findMany({
       where: {
         archivedAt: null,
@@ -82,31 +89,69 @@ export async function listUnits(actor: Actor, requestedSubDistrict?: string | nu
     getRankingConfig(subDistrictId),
   ]);
 
+  const unitIds = units.map((unit) => unit.id);
   const [signals, drafts] = await Promise.all([
-    cycle
-      ? prisma.checkinSignal.findMany({ where: { cycleId: cycle.id, undoneAt: null }, select: { unitId: true } })
+    unitIds.length > 0
+      ? prisma.checkinSignal.findMany({
+          where: { unitId: { in: unitIds } },
+          orderBy: { submittedAt: "asc" },
+          select: {
+            id: true,
+            unitId: true,
+            cycleId: true,
+            reportedStatus: true,
+            submittedAt: true,
+            undoneAt: true,
+          },
+        })
       : Promise.resolve([]),
     cycle
       ? prisma.messageDraft.findMany({ where: { cycleId: cycle.id }, select: { unitId: true, sentAt: true } })
       : Promise.resolve([]),
   ]);
 
-  const signaled = new Set(signals.map((signal) => signal.unitId));
+  const cycleLabelById = new Map(cycles.map((c) => [c.id, c.periodLabel]));
+  const closedCycles = cycles.filter((c) => c.closedAt !== null);
+  const activeSignalCyclesByUnit = new Map<string, Set<string>>();
+  const signaledCurrent = new Set<string>();
+
+  for (const signal of signals) {
+    if (signal.undoneAt) continue;
+    let set = activeSignalCyclesByUnit.get(signal.unitId);
+    if (!set) {
+      set = new Set<string>();
+      activeSignalCyclesByUnit.set(signal.unitId, set);
+    }
+    set.add(signal.cycleId);
+    if (cycle && signal.cycleId === cycle.id) {
+      signaledCurrent.add(signal.unitId);
+    }
+  }
   const draftSentAt = new Map(drafts.map((draft) => [draft.unitId, draft.sentAt]));
 
   const items: UnitListItem[] = units.map((unit) => {
-    const lastContact = maxDate(unit.lastSignalAt, unit.lastVisitedAt);
+    const activeSet = activeSignalCyclesByUnit.get(unit.id) ?? new Set<string>();
+    const signaledThisCycle = signaledCurrent.has(unit.id);
+    const visitedCurrentCycle = Boolean(
+      cycle && unit.lastVisitedAt && unit.lastVisitedAt.getTime() >= cycle.openedAt.getTime(),
+    );
     return {
       id: unit.id,
       name: unit.name,
       kelurahan: unit.kelurahan ?? "",
       managerContact: unit.managerContact,
       status: unit.currentStatus as UnitStatus,
-      silentCycles: silentCyclesFor(lastContact, cycles),
+      silentCycles: countConsecutiveSilentCycles({
+        createdAt: unit.createdAt,
+        closedCycles,
+        activeSignalCycleIds: activeSet,
+        signaledCurrentCycle: signaledThisCycle,
+        visitedCurrentCycle,
+      }),
       monthsSinceContact: unit.lastVisitedAt ? monthsBetween(unit.lastVisitedAt, now) : null,
       lastSignalAt: unit.lastSignalAt?.toISOString() ?? null,
       lastVisitedAt: unit.lastVisitedAt?.toISOString() ?? null,
-      signaledThisCycle: signaled.has(unit.id),
+      signaledThisCycle,
       draftSentAt: draftSentAt.get(unit.id)?.toISOString() ?? null,
       isSynthetic: unit.isSynthetic,
     };
@@ -129,6 +174,14 @@ export async function listUnits(actor: Actor, requestedSubDistrict?: string | nu
     config,
     units: ranked,
     closed,
+    signals: signals.map((signal) => ({
+      id: signal.id,
+      unitId: signal.unitId,
+      cycle: cycleLabelById.get(signal.cycleId) ?? "",
+      status: signal.reportedStatus as ReportedStatus,
+      at: signal.submittedAt.toISOString(),
+      undoneAt: signal.undoneAt?.toISOString() ?? null,
+    })),
     generatedAt: now.toISOString(),
   };
 }

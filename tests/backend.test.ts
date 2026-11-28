@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { signSessionToken, verifySessionToken } from "@/lib/auth/session-token";
-import { monthsBetween, nextCycleLabel, silentCyclesFor } from "@/lib/services/cycle-math";
+import { countConsecutiveSilentCycles, monthsBetween, nextCycleLabel, silentCyclesFor } from "@/lib/services/cycle-math";
 
 beforeAll(() => {
   process.env.AUTH_SECRET = "unit-test-secret-at-least-16-chars";
@@ -59,5 +59,50 @@ describe("cycle maths", () => {
     expect(silentCyclesFor(new Date(2026, 8, 15), cycles)).toBe(0);
     expect(silentCyclesFor(new Date(2026, 7, 15), cycles)).toBe(1);
     expect(silentCyclesFor(null, cycles)).toBe(2);
+  });
+
+  it("counts consecutive closed silent cycles bounded by creation month and signals", () => {
+    const closedCycles = [
+      { id: "c4", openedAt: new Date(2026, 6, 1) },
+      { id: "c3", openedAt: new Date(2026, 7, 1) },
+      { id: "c2", openedAt: new Date(2026, 8, 1) },
+      { id: "c1", openedAt: new Date(2026, 9, 1) },
+    ];
+    expect(
+      countConsecutiveSilentCycles({
+        createdAt: new Date(2026, 6, 1),
+        closedCycles,
+        activeSignalCycleIds: new Set(),
+        signaledCurrentCycle: false,
+        visitedCurrentCycle: false,
+      }),
+    ).toBe(4);
+    expect(
+      countConsecutiveSilentCycles({
+        createdAt: new Date(2026, 7, 1),
+        closedCycles,
+        activeSignalCycleIds: new Set(),
+        signaledCurrentCycle: false,
+        visitedCurrentCycle: false,
+      }),
+    ).toBe(3);
+    expect(
+      countConsecutiveSilentCycles({
+        createdAt: new Date(2026, 6, 1),
+        closedCycles,
+        activeSignalCycleIds: new Set(["c3"]),
+        signaledCurrentCycle: false,
+        visitedCurrentCycle: false,
+      }),
+    ).toBe(2);
+    expect(
+      countConsecutiveSilentCycles({
+        createdAt: new Date(2026, 6, 1),
+        closedCycles,
+        activeSignalCycleIds: new Set(),
+        signaledCurrentCycle: true,
+        visitedCurrentCycle: false,
+      }),
+    ).toBe(0);
   });
 });

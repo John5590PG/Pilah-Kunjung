@@ -45,6 +45,14 @@ function cycleLabel(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function subCalendarMonths(date, months) {
+  const targetYear = date.getFullYear();
+  const targetMonth = date.getMonth() - months;
+  const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const day = Math.min(date.getDate(), lastDayOfMonth);
+  return new Date(targetYear, targetMonth, day, date.getHours(), date.getMinutes(), date.getSeconds());
+}
+
 async function main() {
   const seedUnits = JSON.parse(readFileSync(new URL("../src/data/seed-units.json", import.meta.url), "utf8"));
   const now = new Date();
@@ -113,6 +121,21 @@ async function main() {
     create: { periodLabel: label, openedAt, cutoffAt },
   });
 
+  // Seed 6 prior closed cycles so silentCycles parity matches proposal §6.1.
+  const priorCycles = [];
+  for (let back = 1; back <= 6; back += 1) {
+    const pStart = new Date(now.getFullYear(), now.getMonth() - back, 1);
+    const pEnd = new Date(now.getFullYear(), now.getMonth() - back + 1, 1);
+    const pLabel = cycleLabel(pStart);
+    const pCutoff = new Date(pStart.getTime() + 7 * DAY);
+    const c = await prisma.reportingCycle.upsert({
+      where: { periodLabel: pLabel },
+      update: { closedAt: pEnd },
+      create: { periodLabel: pLabel, openedAt: pStart, cutoffAt: pCutoff, closedAt: pEnd },
+    });
+    priorCycles.push(c); // index 0 = 1 month ago, index 5 = 6 months ago
+  }
+
   let tokensCreated = 0;
   let signalsCreated = 0;
 
@@ -121,7 +144,13 @@ async function main() {
     const daysAgo = seed.lastSignalDaysAgo === null ? null : Number(seed.lastSignalDaysAgo);
     const months = seed.monthsSinceContact === null ? null : Number(seed.monthsSinceContact);
     const lastSignalAt = daysAgo === null ? null : new Date(now.getTime() - daysAgo * DAY);
-    const lastVisitedAt = months === null ? null : new Date(now.getTime() - months * 30 * DAY);
+    const lastVisitedAt = months === null ? null : subCalendarMonths(now, months);
+
+    // Units with never-signaled history use createdAt to define how many closed
+    // cycles elapsed since registration (e.g. Unit Contoh 01 = 3, Unit Contoh 10 = 4).
+    const createdCycleIndex =
+      daysAgo === null && silentCycles > 0 ? Math.min(silentCycles - 1, priorCycles.length - 1) : priorCycles.length - 1;
+    const unitCreatedAt = priorCycles[createdCycleIndex].openedAt;
 
     await prisma.unit.upsert({
       where: { id: seed.id },
@@ -132,6 +161,7 @@ async function main() {
         currentStatus: seed.status,
         lastSignalAt,
         lastVisitedAt,
+        createdAt: unitCreatedAt,
         isSynthetic: true,
         subDistrictId: subDistrict.id,
         archivedAt: null,
@@ -144,6 +174,7 @@ async function main() {
         currentStatus: seed.status,
         lastSignalAt,
         lastVisitedAt,
+        createdAt: unitCreatedAt,
         isSynthetic: true,
         subDistrictId: subDistrict.id,
       },
@@ -176,6 +207,25 @@ async function main() {
           },
         });
         signalsCreated += 1;
+      }
+    } else if (silentCycles > 0 && lastSignalAt !== null) {
+      const targetIdx = Math.min(silentCycles, priorCycles.length - 1);
+      const targetCycle = priorCycles[targetIdx];
+      const existingPast = await prisma.checkinSignal.findFirst({
+        where: { unitId: seed.id, cycleId: targetCycle.id, undoneAt: null },
+      });
+      if (!existingPast) {
+        await prisma.checkinSignal.create({
+          data: {
+            unitId: seed.id,
+            cycleId: targetCycle.id,
+            reportedStatus: seed.status === "CLOSED" ? "CLOSED" : "OPERATING",
+            sourceRole: "MANAGER",
+            submittedAt: lastSignalAt,
+            previousStatus: "UNCONFIRMED",
+            previousLastSignalAt: null,
+          },
+        });
       }
     }
   }

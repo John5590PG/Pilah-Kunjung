@@ -27,8 +27,9 @@ export interface TokenUnitView {
   status: UnitStatus;
   isSynthetic: boolean;
   lastSignalAt: string | null;
-  /** Submitted time of the latest active signal this cycle, if any. */
+  /** Submitted time and reported status of the latest active signal this cycle, if any. */
   signalAt: string | null;
+  signalStatus: ReportedStatus | null;
   cycle: string | null;
   canUndo: boolean;
   /** Latest coordinator follow-up, if any (unit-level only, no resident data). */
@@ -46,12 +47,15 @@ export async function readToken(rawToken: string): Promise<TokenUnitView> {
     throw new HttpError(404, "Tautan tidak berlaku.", "INVALID_TOKEN");
   }
 
-  const [cycle, signal, visit] = await Promise.all([
-    prisma.reportingCycle.findFirst({ orderBy: { openedAt: "desc" } }),
-    prisma.checkinSignal.findFirst({
-      where: { unitId: token.unitId, undoneAt: null },
-      orderBy: { submittedAt: "desc" },
-    }),
+  const cycle = await prisma.reportingCycle.findFirst({ orderBy: { openedAt: "desc" } });
+
+  const [signal, visit] = await Promise.all([
+    cycle
+      ? prisma.checkinSignal.findFirst({
+          where: { unitId: token.unitId, cycleId: cycle.id, undoneAt: null },
+          orderBy: { submittedAt: "desc" },
+        })
+      : Promise.resolve(null),
     prisma.visitConfirmation.findFirst({
       where: { unitId: token.unitId },
       orderBy: { verifiedAt: "desc" },
@@ -73,6 +77,7 @@ export async function readToken(rawToken: string): Promise<TokenUnitView> {
     isSynthetic: token.unit.isSynthetic,
     lastSignalAt: token.unit.lastSignalAt?.toISOString() ?? null,
     signalAt: signal?.submittedAt.toISOString() ?? null,
+    signalStatus: (signal?.reportedStatus as ReportedStatus) ?? null,
     cycle: cycle?.periodLabel ?? null,
     canUndo,
     visit: visit

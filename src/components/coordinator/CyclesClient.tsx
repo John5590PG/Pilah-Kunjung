@@ -260,7 +260,7 @@ export function CyclesClient() {
                           </div>
 
                           <p className="text-[11px] text-zinc-700">
-                            Terima kasih, <i>Koordinator DLH</i>
+                            Terima kasih, <i>Korcam Gunungpati</i>
                           </p>
 
                           <div className="flex items-center justify-end gap-1 pt-0.5 text-[10px] text-zinc-500">
@@ -346,7 +346,7 @@ export function CyclesClient() {
 
                 <details className="pt-2 border-t border-line/60 text-xs text-muted">
                   <summary className="cursor-pointer font-bold text-ink rounded-fib2 px-1.5 -mx-1.5 transition-colors hover:bg-green-dark hover:text-white">
-                    Lihat URL Asli wa.me (Planned API)
+                    Lihat URL Asli wa.me
                   </summary>
                   <code className="mt-2 block break-all rounded-md bg-paper p-2 font-mono text-[11px] text-ink border border-line">
                     {waLink}

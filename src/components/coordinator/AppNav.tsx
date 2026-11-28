@@ -18,6 +18,7 @@ import {
   LayoutDashboard,
   Settings,
   RotateCcw,
+  LogOut,
   Menu,
   X,
 } from "lucide-react";
@@ -43,6 +44,11 @@ export function AppNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    window.location.assign("/login");
+  };
+
   return (
     <header className="glass-header sticky top-0 z-50" data-scrolled={scrolled}>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-x-6 px-4 py-3 sm:px-6">
@@ -60,7 +66,7 @@ export function AppNav() {
               Pilah &amp; Kunjung
             </span>
             <span className="text-[10px] font-medium text-muted tracking-wide">
-              DLH Kota Semarang
+              Pilot Kec. Gunungpati (Simulasi)
             </span>
           </div>
         </Link>
@@ -96,7 +102,18 @@ export function AppNav() {
             30 Unit Simulasi
           </span>
 
-          {mode !== "api" && (
+          {mode === "api" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void logout()}
+              className="border-green-light/70 text-green-mid bg-white/70 hover:bg-green-dark hover:text-white hover:border-green-dark text-sm h-9 gap-1.5 rounded-fib3 cursor-pointer hidden sm:flex transition-all duration-200"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Keluar</span>
+            </Button>
+          ) : (
             <Button
               type="button"
               variant="outline"
@@ -146,7 +163,18 @@ export function AppNav() {
                 </Link>
               );
             })}
-            {mode !== "api" && (
+            {mode === "api" ? (
+              <div className="mt-2 pt-2 border-t border-green-100">
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); void logout(); }}
+                  className="flex items-center gap-2 text-sm text-muted px-3 py-2 rounded-fib2 hover:bg-green-dark hover:text-white transition-colors duration-200"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Keluar
+                </button>
+              </div>
+            ) : (
               <div className="mt-2 pt-2 border-t border-green-100">
                 <button
                   type="button"

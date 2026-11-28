@@ -63,3 +63,34 @@ export function silentCyclesFor(lastContact: Date | null, cycles: CycleStamp[]):
   if (!lastContact) return closed.length;
   return closed.filter((cycle) => cycle.openedAt.getTime() > lastContact.getTime()).length;
 }
+
+export interface ClosedCycleRef {
+  id: string;
+  openedAt: Date;
+}
+
+/**
+ * Counts consecutive closed cycles without a manager signal prior to the
+ * current cycle, bounded by unit creation month and reset if the unit already
+ * signaled or received a coordinator visit in the current cycle.
+ */
+export function countConsecutiveSilentCycles(opts: {
+  createdAt: Date;
+  closedCycles: ClosedCycleRef[];
+  activeSignalCycleIds: Set<string>;
+  signaledCurrentCycle: boolean;
+  visitedCurrentCycle: boolean;
+}): number {
+  if (opts.signaledCurrentCycle || opts.visitedCurrentCycle) return 0;
+
+  const createdMonthStart = new Date(opts.createdAt.getFullYear(), opts.createdAt.getMonth(), 1).getTime();
+  const ordered = [...opts.closedCycles].sort((a, b) => b.openedAt.getTime() - a.openedAt.getTime());
+
+  let count = 0;
+  for (const cycle of ordered) {
+    if (cycle.openedAt.getTime() < createdMonthStart) break;
+    if (opts.activeSignalCycleIds.has(cycle.id)) break;
+    count += 1;
+  }
+  return count;
+}

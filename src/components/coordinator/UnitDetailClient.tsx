@@ -34,7 +34,7 @@ const VERIFIED: ReportedStatus[] = ["OPERATING", "PAUSED", "CLOSED"];
 
 export function UnitDetailClient() {
   const { id } = useParams<{ id: string }>();
-  const { state, config, actions, busy, error } = useAppData();
+  const { state, config, mode: dataMode, actions, busy, error } = useAppData();
   const [mode, setMode] = useState<ContactMode>("CALL");
   const [status, setStatus] = useState<ReportedStatus>("OPERATING");
   const [note, setNote] = useState("");
@@ -301,7 +301,11 @@ export function UnitDetailClient() {
           </CardHeader>
           <CardContent>
             {signals.length === 0 ? (
-              <p className="text-xs text-muted">Belum ada sinyal check-in yang dicatat pada sesi demo ini.</p>
+              <p className="text-xs text-muted">
+                {dataMode === "api"
+                  ? "Belum ada sinyal check-in yang dicatat pada siklus berjalan."
+                  : "Belum ada sinyal check-in yang dicatat pada sesi demo ini."}
+              </p>
             ) : (
               <ul className="divide-y divide-line text-xs">
                 {signals.map((s) => (
@@ -324,7 +328,11 @@ export function UnitDetailClient() {
           </CardHeader>
           <CardContent>
             {visits.length === 0 ? (
-              <p className="text-xs text-muted">Belum ada riwayat kontak/kunjungan yang dicatat pada sesi demo ini.</p>
+              <p className="text-xs text-muted">
+                {dataMode === "api"
+                  ? "Belum ada riwayat kontak/kunjungan yang dicatat di basis data."
+                  : "Belum ada riwayat kontak/kunjungan yang dicatat pada sesi demo ini."}
+              </p>
             ) : (
               <ul className="divide-y divide-line text-xs">
                 {visits.map((v) => (

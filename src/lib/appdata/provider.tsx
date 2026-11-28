@@ -9,6 +9,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import seedUnits from "@/data/seed-units.json";
 import { useDemo } from "@/lib/demo/store";
 import {
@@ -18,6 +19,7 @@ import {
   undoCheckIn as demoUndo,
   markDraftSent as demoDraftSent,
   advanceCycle as demoRoll,
+  type DemoSignal,
   type DemoState,
   type DemoUnit,
   type DemoVisit,
@@ -39,6 +41,7 @@ export interface TokenView {
   isSynthetic: boolean;
   lastSignalAt: string | null;
   signalAt: string | null;
+  signalStatus: ReportedStatus | null;
   cycle: string | null;
   canUndo: boolean;
   visit: { mode: "CALL" | "VISIT"; verifiedStatus: string; note: string | null; at: string } | null;
@@ -59,6 +62,7 @@ interface AppData {
   config: RankingConfig;
   busy: boolean;
   error: string | null;
+  refreshKey: number;
   tokenView?: TokenView | null;
   actions: {
     checkIn(token: string, status: ReportedStatus): Promise<void>;
@@ -107,17 +111,30 @@ function toDemoState(data: UnitsResult, visits: ApiVisit[]): DemoState {
     at: visit.verifiedAt,
   }));
 
+  const demoSignals: DemoSignal[] = (data.signals ?? []).map((sig) => ({
+    id: sig.id,
+    unitId: sig.unitId,
+    cycle: sig.cycle,
+    status: sig.status,
+    at: sig.at,
+    undoneAt: sig.undoneAt,
+    before: { status: "UNCONFIRMED", silentCycles: 0, lastSignalAt: null, signaledThisCycle: false },
+  }));
+
   return {
     version: 1,
     cycle: data.cycle?.label ?? cycleLabel(new Date()),
     units: [...data.units, ...data.closed].map(toDemoUnit),
-    signals: [],
+    signals: demoSignals,
     visits: demoVisits,
   };
 }
 
+const COORDINATOR_PREFIXES = ["/dashboard", "/cycles", "/units", "/settings"];
+
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const demo = useDemo();
+  const pathname = usePathname();
   const [mode, setMode] = useState<Mode>("loading");
   const [apiState, setApiState] = useState<DemoState | null>(null);
   const [apiConfig, setApiConfig] = useState<RankingConfig>(DEFAULT_CONFIG);
@@ -125,6 +142,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+
+  const needsCoordinatorData = COORDINATOR_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 
   useEffect(() => {
     setDemoConfigState(loadDemoConfig());
@@ -141,7 +162,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (mode !== "api") return;
+    if (mode !== "api" || !needsCoordinatorData) return;
     try {
       const [data, visitData] = await Promise.all([
         apiFetch<UnitsResult>("/api/units"),
@@ -153,11 +174,11 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Gagal memuat data dari server.");
     }
-  }, [mode]);
+  }, [mode, needsCoordinatorData]);
 
   useEffect(() => {
-    if (mode === "api") void refresh();
-  }, [mode, refresh, revision]);
+    if (mode === "api" && needsCoordinatorData) void refresh();
+  }, [mode, needsCoordinatorData, refresh, revision]);
 
   const run = useCallback(
     async (action: () => Promise<unknown> | void) => {
@@ -185,6 +206,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     config: mode === "api" ? apiConfig : demoConfig,
     busy,
     error,
+    refreshKey: revision,
     actions: {
       checkIn: (token, status) =>
         mode === "api"
@@ -245,7 +267,7 @@ export function useAppData(token?: string): AppData {
     return () => {
       alive = false;
     };
-  }, [token, ctx.mode, ctx.state, tick]);
+  }, [token, ctx.mode, ctx.refreshKey, tick]);
 
   return {
     ...ctx,

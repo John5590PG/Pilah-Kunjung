@@ -25,7 +25,7 @@ export function VerificationSection() {
                 Rumus Prioritas Kunjungan
               </div>
               <div className="font-mono text-2xl font-black text-green-mid">
-                SKOR = (3 × M) + W + B
+                SKOR = (2 × M) + W + B
               </div>
               <div className="text-xs text-muted space-y-1 leading-relaxed">
                 <div><strong className="text-ink">M</strong> = Jumlah bulan berturut-turut tanpa laporan (silent cycles)</div>
